@@ -1,2 +1,4 @@
-# Per-feature migrations (ownership ranges). Empty until feature modules unlock.
-# Naming: VyyyyMMddHHmm__{owner}_{desc}.sql
+# Placeholder — feature migrations
+
+Owners: billing / dbm / exrt  
+Naming: `VyyyyMMddHHmm__{owner}_{desc}.sql`
