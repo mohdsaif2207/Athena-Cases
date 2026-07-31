@@ -111,13 +111,41 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
 
     @Override
     public DbmWorkOrderResponse update(Long caseId, UpdateDbmWorkOrderRequest request) {
-        // TODO load existing Case and DbmWorkOrder
-        // TODO update shared Case header fields
-        // TODO update DbmWorkOrder fields
-        // TODO replace Coverage Levels
-        // TODO replace Account Types
-        // TODO replace Spoken Keys
-        return null;
+        Instant now = Instant.now();
+        String actor = TEMP_CASE_OWNER;
+
+        Case caseEntity = caseRepository.findById(caseId)
+                .orElseThrow(() -> new IllegalStateException("Case not found: " + caseId));
+
+        DbmWorkOrder dbmWorkOrder = dbmWorkOrderRepository.findByCaseId(caseId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "DBM Work Order not found for caseId: " + caseId));
+
+        caseEntity.setSubject(request.subject());
+        caseEntity.setDescription(request.description());
+        caseEntity.setStatus(request.status());
+        caseEntity.setPriority(request.priority());
+        caseEntity.setRequestedDueDate(request.requestedDueDate());
+        caseEntity.setClientId(request.clientId());
+        caseEntity.setPendingDbmApproval(isCustomTransferType(request.transferType()));
+        caseEntity.setUpdatedAt(now);
+        caseEntity.setUpdatedBy(actor);
+
+        mapRequestToDbmWorkOrder(request, dbmWorkOrder);
+        dbmWorkOrder.setUpdatedAt(now);
+        dbmWorkOrder.setUpdatedBy(actor);
+
+        dbmWorkOrder.getCoverageLevels().clear();
+        dbmWorkOrder.getAccountTypes().clear();
+        dbmWorkOrder.getSpokenKeys().clear();
+        addCoverageLevels(dbmWorkOrder, request.coverageLevels(), now, actor);
+        addAccountTypes(dbmWorkOrder, request.requestedAccountTypes(), now, actor);
+        addSpokenKeys(dbmWorkOrder, request.spokenKeys(), now, actor);
+
+        Case savedCase = caseRepository.save(caseEntity);
+        DbmWorkOrder savedDbm = dbmWorkOrderRepository.save(dbmWorkOrder);
+
+        return toResponse(savedCase, savedDbm);
     }
 
     @Override
@@ -157,28 +185,94 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
     }
 
     private void mapRequestToDbmWorkOrder(CreateDbmWorkOrderRequest request, DbmWorkOrder target) {
-        target.setVendor(request.vendor());
-        target.setCoreProcessorConversion(request.coreProcessorConversion());
-        target.setTransferType(request.transferType());
-        target.setReturnFileExpected(request.returnFileExpected());
-        target.setPgpKeyAtAcxiom(request.pgpKeyAtAcxiom());
-        target.setExpectedQuantity(request.expectedQuantity());
+        applyDbmWorkOrderFields(
+                target,
+                request.vendor(),
+                request.coreProcessorConversion(),
+                request.transferType(),
+                request.returnFileExpected(),
+                request.pgpKeyAtAcxiom(),
+                request.expectedQuantity(),
+                request.frequency(),
+                request.specialInstructions(),
+                request.eventId(),
+                request.mediaIds(),
+                request.mailMonth(),
+                request.mediaOutQuantity(),
+                request.changesToMatchbackDb(),
+                request.selectionCriteria(),
+                request.matchbackField(),
+                request.changeTo(),
+                request.dbmWorkOrderNumber(),
+                request.dbmCompletionNotes(),
+                request.totalRecordsUpdated());
+    }
+
+    private void mapRequestToDbmWorkOrder(UpdateDbmWorkOrderRequest request, DbmWorkOrder target) {
+        applyDbmWorkOrderFields(
+                target,
+                request.vendor(),
+                request.coreProcessorConversion(),
+                request.transferType(),
+                request.returnFileExpected(),
+                request.pgpKeyAtAcxiom(),
+                request.expectedQuantity(),
+                request.frequency(),
+                request.specialInstructions(),
+                request.eventId(),
+                request.mediaIds(),
+                request.mailMonth(),
+                request.mediaOutQuantity(),
+                request.changesToMatchbackDb(),
+                request.selectionCriteria(),
+                request.matchbackField(),
+                request.changeTo(),
+                request.dbmWorkOrderNumber(),
+                request.dbmCompletionNotes(),
+                request.totalRecordsUpdated());
+    }
+
+    private void applyDbmWorkOrderFields(
+            DbmWorkOrder target,
+            String vendor,
+            boolean coreProcessorConversion,
+            String transferType,
+            String returnFileExpected,
+            String pgpKeyAtAcxiom,
+            Integer expectedQuantity,
+            String frequency,
+            String specialInstructions,
+            String eventId,
+            String mediaIds,
+            String mailMonth,
+            Integer mediaOutQuantity,
+            boolean changesToMatchbackDb,
+            String selectionCriteria,
+            String matchbackField,
+            String changeTo,
+            String dbmWorkOrderNumber,
+            String dbmCompletionNotes,
+            Integer totalRecordsUpdated) {
+        target.setVendor(vendor);
+        target.setCoreProcessorConversion(coreProcessorConversion);
+        target.setTransferType(transferType);
+        target.setReturnFileExpected(returnFileExpected);
+        target.setPgpKeyAtAcxiom(pgpKeyAtAcxiom);
+        target.setExpectedQuantity(expectedQuantity);
         target.setFrequency(
-                request.frequency() == null || request.frequency().isBlank()
-                        ? DEFAULT_FREQUENCY
-                        : request.frequency());
-        target.setSpecialInstructions(request.specialInstructions());
-        target.setEventId(request.eventId());
-        target.setMediaIds(request.mediaIds());
-        target.setMailMonth(request.mailMonth());
-        target.setMediaOutQuantity(request.mediaOutQuantity());
-        target.setChangesToMatchbackDb(request.changesToMatchbackDb());
-        target.setSelectionCriteria(request.selectionCriteria());
-        target.setMatchbackField(request.matchbackField());
-        target.setChangeTo(request.changeTo());
-        target.setDbmWorkOrderNumber(request.dbmWorkOrderNumber());
-        target.setDbmCompletionNotes(request.dbmCompletionNotes());
-        target.setTotalRecordsUpdated(request.totalRecordsUpdated());
+                frequency == null || frequency.isBlank() ? DEFAULT_FREQUENCY : frequency);
+        target.setSpecialInstructions(specialInstructions);
+        target.setEventId(eventId);
+        target.setMediaIds(mediaIds);
+        target.setMailMonth(mailMonth);
+        target.setMediaOutQuantity(mediaOutQuantity);
+        target.setChangesToMatchbackDb(changesToMatchbackDb);
+        target.setSelectionCriteria(selectionCriteria);
+        target.setMatchbackField(matchbackField);
+        target.setChangeTo(changeTo);
+        target.setDbmWorkOrderNumber(dbmWorkOrderNumber);
+        target.setDbmCompletionNotes(dbmCompletionNotes);
+        target.setTotalRecordsUpdated(totalRecordsUpdated);
     }
 
     private void addCoverageLevels(DbmWorkOrder parent, List<String> values, Instant now, String actor) {
