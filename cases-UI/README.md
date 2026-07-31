@@ -1,32 +1,23 @@
-# React + TypeScript + Vite
+# Athena Cases UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript + Vite frontend for Athena Cases.
 
-Currently, two official plugins are available:
+## Login module (current)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Start backend (`cases-MT`) with the `dev` profile (default).
+2. Install and run the UI:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+3. Open http://localhost:5173/login  
+   Default admin (from `application-dev.yml`):
+   - Username: `fm_admin`
+   - Password: `FM@Admin123`
+
+Successful login redirects to the Cases Dashboard placeholder.
+
+Optional: copy `.env.example` to `.env.development` and set `VITE_API_BASE_URL`.  
+If unset, the Vite dev proxy forwards `/api` to `http://localhost:8080`.

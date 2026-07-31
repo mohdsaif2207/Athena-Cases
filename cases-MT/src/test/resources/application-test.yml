@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:cases_mt_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173
+  jwt:
+    secret: test-jwt-secret-key-at-least-32-characters-long
+    expiration-minutes: 60
+  default:
+    admin:
+      seed-enabled: true
+      username: fm_admin
+      password: FM@Admin123
+      display-name: ADMKL
