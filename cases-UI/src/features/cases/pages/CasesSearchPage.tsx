@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchCases } from '@/features/cases/api/casesApi'
+import type { CaseTypeOption } from '@/features/cases/api/lookupApi'
 import { CaseDetailsModal } from '@/features/cases/components/CaseDetailsModal'
 import { CasesAdvancedFilters } from '@/features/cases/components/CasesAdvancedFilters'
 import { CasesColumnConfig } from '@/features/cases/components/CasesColumnConfig'
 import { CasesGrid } from '@/features/cases/components/CasesGrid'
 import { CasesPagination } from '@/features/cases/components/CasesPagination'
 import { CasesToolbar } from '@/features/cases/components/CasesToolbar'
+import { NewCaseTypeModal } from '@/features/cases/components/NewCaseTypeModal'
+import { NotificationQueuePanel } from '@/features/cases/components/NotificationQueuePanel'
+import { WorkflowQueuePanel } from '@/features/cases/components/WorkflowQueuePanel'
 import {
   EMPTY_ADVANCED_FILTERS,
   EMPTY_COLUMN_FILTERS,
@@ -18,6 +23,7 @@ import {
 } from '@/features/cases/utils/columnPrefs'
 import { exportCasesToExcel } from '@/features/cases/utils/exportCasesExcel'
 import { applyCaseFilters, paginate } from '@/features/cases/utils/filterCases'
+import { resolveCaseTypeCreatePath } from '@/features/cases/utils/caseTypeRoutes'
 import type {
   AdvancedFilterState,
   CaseDetailMode,
@@ -31,6 +37,7 @@ const PAGE_SIZE = 10
 
 export function CasesSearchPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const permissions = user?.permissions ?? []
 
   const canCreate = permissions.includes('CASES_CREATE') || permissions.includes('CASES_ACCESS')
@@ -39,6 +46,8 @@ export function CasesSearchPage() {
     permissions.includes('CASES_EXPORT') ||
     permissions.includes('CASES_ACCESS') ||
     permissions.includes('CASES_VIEW')
+  const canViewWorkflow = permissions.includes('WF_VIEW')
+  const canViewNotification = permissions.includes('NOTIF_VIEW')
 
   const [allCases, setAllCases] = useState<CaseRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -58,6 +67,7 @@ export function CasesSearchPage() {
   const [detailMode, setDetailMode] = useState<CaseDetailMode>(null)
   const [selected, setSelected] = useState<CaseRecord | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [caseTypeModalOpen, setCaseTypeModalOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -101,6 +111,16 @@ export function CasesSearchPage() {
     window.setTimeout(() => setToast(null), 2800)
   }
 
+  function handleCaseTypeSelected(caseType: CaseTypeOption) {
+    const path = resolveCaseTypeCreatePath(caseType.code)
+    setCaseTypeModalOpen(false)
+    if (!path) {
+      showToast(`No create screen is configured for ${caseType.label}.`)
+      return
+    }
+    navigate(path)
+  }
+
   return (
     <div className="cases-search" data-testid="cases-search-page">
       <CasesToolbar
@@ -122,9 +142,7 @@ export function CasesSearchPage() {
           exportCasesToExcel(filtered)
           showToast(`Exported ${filtered.length} case(s) to Excel.`)
         }}
-        onNewCase={() =>
-          showToast('New Case will open the case-type flow in a later module.')
-        }
+        onNewCase={() => setCaseTypeModalOpen(true)}
       />
 
       <CasesAdvancedFilters
@@ -207,6 +225,9 @@ export function CasesSearchPage() {
         />
       </div>
 
+      {canViewWorkflow ? <WorkflowQueuePanel onToast={showToast} /> : null}
+      {canViewNotification ? <NotificationQueuePanel onToast={showToast} /> : null}
+
       {prefsSavedMessage ? (
         <div className="cases-toast" role="status" data-testid="cases-prefs-toast">
           {prefsSavedMessage}
@@ -231,6 +252,12 @@ export function CasesSearchPage() {
           setSelected(null)
           showToast(`Case ${next.caseId} updated.`)
         }}
+      />
+
+      <NewCaseTypeModal
+        open={caseTypeModalOpen}
+        onClose={() => setCaseTypeModalOpen(false)}
+        onSelect={handleCaseTypeSelected}
       />
     </div>
   )

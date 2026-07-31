@@ -13,7 +13,7 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
-    locations: classpath:db/migration/common
+    locations: classpath:db/migration/common,classpath:db/migration/lookups,classpath:db/migration/audit,classpath:db/migration/features
     baseline-on-migrate: true
 
 server:

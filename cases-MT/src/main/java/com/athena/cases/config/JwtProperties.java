@@ -1,4 +1,4 @@
-package com.athena.cases.security;
+package com.athena.cases.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

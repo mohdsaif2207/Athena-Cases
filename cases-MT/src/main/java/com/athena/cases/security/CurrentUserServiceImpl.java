@@ -27,7 +27,8 @@ public class CurrentUserServiceImpl implements CurrentUserService {
         return principal.getPermissionCodes().contains(permissionCode);
     }
 
-    private UserPrincipal requirePrincipal() {
+    @Override
+    public UserPrincipal requirePrincipal() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
             throw new ForbiddenException("Authenticated user required");

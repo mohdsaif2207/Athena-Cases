@@ -1,5 +1,6 @@
 package com.athena.cases.security;
 
+import com.athena.cases.config.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

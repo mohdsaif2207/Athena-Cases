@@ -498,6 +498,125 @@
   gap: 10px 12px;
 }
 
+.cases-modal--case-type {
+  width: min(480px, 100%);
+}
+
+.cases-modal__body--single {
+  grid-template-columns: 1fr;
+}
+
+.cases-case-type-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cases-case-type-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.cases-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.cases-case-type-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border: 1px solid var(--cs-border);
+  background: #fff;
+  color: var(--cs-navy);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.cases-case-type-option input[type='radio'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--cs-orange);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.cases-case-type-option:hover {
+  border-color: var(--cs-orange);
+  background: #fff7f5;
+}
+
+.cases-case-type-option.is-selected {
+  border-color: var(--cs-orange);
+  background: #fff7f5;
+  box-shadow: inset 3px 0 0 var(--cs-orange);
+}
+
+.cases-case-type-empty {
+  margin: 8px 0;
+  color: var(--cs-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.cases-case-type-validation {
+  margin: 8px 0 0;
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cases-modal--case-type .cases-modal__footer {
+  gap: 8px;
+}
+
+.case-create-placeholder {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 16px;
+  font-family: Arial, Helvetica, "Segoe UI", sans-serif;
+}
+
+.case-create-placeholder__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.case-create-placeholder__header h1 {
+  margin: 0;
+  color: #2a3558;
+  font-size: 20px;
+}
+
+.case-create-placeholder__body {
+  color: #6b7280;
+  font-size: 13px;
+}
+
 .cases-toast {
   position: fixed;
   right: 16px;
@@ -509,6 +628,28 @@
   z-index: 60;
   font-size: 12px;
   font-weight: 600;
+}
+
+.cases-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cases-queue__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cs-navy);
+  padding: 4px 0;
+}
+
+.cases-queue__toolbar {
+  padding-top: 0;
+}
+
+.cases-queue__grid {
+  min-width: 1400px;
 }
 
 @media (max-width: 1100px) {

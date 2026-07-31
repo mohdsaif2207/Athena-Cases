@@ -76,3 +76,33 @@ export interface ColumnPreference {
 }
 
 export type CaseDetailMode = 'view' | 'edit' | null
+
+export interface WorkflowRecord {
+  id: number
+  workflowId: string
+  caseId: number
+  messageKey: string
+  messageId: string
+  messageName: string
+  messageObject: string
+  status: string
+  decision: string
+  owner: string
+  priority: string
+  receivedDate: string
+  action: string
+  logs: string
+}
+
+export interface NotificationRecord {
+  id: number
+  notificationId: string
+  caseId: number
+  messageKey: string
+  messageId: string
+  messageName: string
+  messageObject: string
+  message: string
+  receivedDate: string
+  details: string
+}

@@ -7,7 +7,7 @@ import com.athena.cases.identity.entity.UserEntity;
 import com.athena.cases.identity.repository.GroupRepository;
 import com.athena.cases.identity.repository.RoleRepository;
 import com.athena.cases.identity.repository.UserRepository;
-import com.athena.cases.security.AdminSeedProperties;
+import com.athena.cases.config.AdminSeedProperties;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;

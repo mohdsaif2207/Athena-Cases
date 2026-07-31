@@ -1,7 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
+import { BillingCaseCreatePage } from '@/features/cases/pages/BillingCaseCreatePage'
 import { CasesDashboardPlaceholder } from '@/features/cases/pages/CasesDashboardPlaceholder'
+import { DbmCaseCreatePage } from '@/features/cases/pages/DbmCaseCreatePage'
+import { ExrtCaseCreatePage } from '@/features/cases/pages/ExrtCaseCreatePage'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import './App.css'
 
@@ -16,6 +19,30 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <CasesDashboardPlaceholder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cases/new/dbm"
+            element={
+              <ProtectedRoute>
+                <DbmCaseCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cases/new/exrt"
+            element={
+              <ProtectedRoute>
+                <ExrtCaseCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cases/new/billing"
+            element={
+              <ProtectedRoute>
+                <BillingCaseCreatePage />
               </ProtectedRoute>
             }
           />

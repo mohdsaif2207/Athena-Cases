@@ -1,13 +1,13 @@
 package com.athena.cases.security;
 
-import com.athena.cases.common.web.RequestIdFilter;
-import tools.jackson.databind.ObjectMapper;
 import com.athena.cases.common.dto.ErrorResponse;
+import com.athena.cases.common.web.RequestIdFilter;
+import com.athena.cases.config.CorsProperties;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import org.slf4j.MDC;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -30,7 +30,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@EnableConfigurationProperties({JwtProperties.class, AdminSeedProperties.class})
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
