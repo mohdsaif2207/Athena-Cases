@@ -123,11 +123,14 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
     @Override
     @Transactional(readOnly = true)
     public DbmWorkOrderResponse getByCaseId(Long caseId) {
-        // TODO load Case by id
-        // TODO load DbmWorkOrder by caseId
-        // TODO load Coverage Levels / Account Types / Spoken Keys as needed
-        // TODO map to DbmWorkOrderResponse
-        return null;
+        Case caseEntity = caseRepository.findById(caseId)
+                .orElseThrow(() -> new IllegalStateException("Case not found: " + caseId));
+
+        DbmWorkOrder dbmWorkOrder = dbmWorkOrderRepository.findByCaseId(caseId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "DBM Work Order not found for caseId: " + caseId));
+
+        return toResponse(caseEntity, dbmWorkOrder);
     }
 
     /**
