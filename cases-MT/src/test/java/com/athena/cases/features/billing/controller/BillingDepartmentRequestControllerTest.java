@@ -24,7 +24,6 @@ import com.athena.cases.features.billing.exception.BillingResourceNotFoundExcept
 import com.athena.cases.features.billing.exception.BillingValidationException;
 import com.athena.cases.features.billing.service.BillingDepartmentRequestService;
 import com.athena.cases.lookup.LookupItem;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -36,19 +35,23 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Billing controller HTTP tests.
  *
  * <p>Uses standalone {@link MockMvc} (same stack as {@code spring-boot-starter-webmvc-test})
- * rather than {@code @WebMvcTest}: current pom has no Spring Security starter, so
- * {@code @PreAuthorize} / {@code @WithMockUser} slice tests cannot run until Lead adds
- * security test dependencies. Method-security behaviour is therefore out of scope here.
+ * rather than {@code @WebMvcTest}: method-security / {@code @WithMockUser} slice tests
+ * need {@code spring-security-test} and are out of scope here.
+ *
+ * <p>ObjectMapper is Jackson 3 ({@code tools.jackson.*}) — Spring Boot 4 no longer
+ * ships {@code com.fasterxml.jackson.databind.ObjectMapper} on the classpath.
  */
 @ExtendWith(MockitoExtension.class)
 class BillingDepartmentRequestControllerTest {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
+    private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
 
     @Mock
     private BillingDepartmentRequestService billingDepartmentRequestService;
@@ -252,6 +255,7 @@ class BillingDepartmentRequestControllerTest {
                 null,
                 null,
                 null,
+                null,
                 "Need research on billing reject",
                 null,
                 null,
@@ -276,6 +280,7 @@ class BillingDepartmentRequestControllerTest {
                 null,
                 "Medium",
                 "Requested",
+                null,
                 null,
                 null,
                 null,
