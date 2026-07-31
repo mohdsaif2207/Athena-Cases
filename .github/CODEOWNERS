@@ -1,0 +1,28 @@
+# CODEOWNERS — path-based review routing
+# Adjust GitHub usernames when the team is known.
+
+# Foundation / shared
+/cases-MT/src/main/java/com/athena/cases/common/ @lead
+/cases-MT/src/main/java/com/athena/cases/config/ @lead
+/cases-MT/src/main/java/com/athena/cases/security/ @lead
+/cases-MT/src/main/java/com/athena/cases/audit/ @lead
+/cases-MT/src/main/java/com/athena/cases/casemanagement/ @lead
+/cases-MT/src/main/java/com/athena/cases/workflow/ @lead
+/cases-MT/src/main/java/com/athena/cases/notification/ @lead
+/cases-MT/src/main/java/com/athena/cases/lookup/ @lead
+/cases-MT/src/main/java/com/athena/cases/permission/ @lead
+/cases-MT/src/main/java/com/athena/cases/filestorage/ @lead
+/cases-MT/src/main/resources/db/migration/common/ @lead
+/cases-MT/src/main/resources/db/migration/audit/ @lead
+/cases-MT/src/main/resources/db/migration/lookups/ @lead
+/docs/ @lead
+/api/ @lead
+/.github/ @lead
+
+# Feature owners (replace placeholders)
+/cases-MT/src/main/java/com/athena/cases/features/billing/ @dev2-billing
+/cases-MT/src/main/java/com/athena/cases/features/dbm/ @dev3-dbm
+/cases-MT/src/main/java/com/athena/cases/features/exrt/ @dev4-exrt
+/cases-UI/src/features/billing-department-request/ @dev2-billing
+/cases-UI/src/features/dbm-work-order-request/ @dev3-dbm
+/cases-UI/src/features/exrt-request/ @dev4-exrt
