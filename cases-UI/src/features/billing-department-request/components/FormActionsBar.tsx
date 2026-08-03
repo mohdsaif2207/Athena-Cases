@@ -1,19 +1,48 @@
-/**
- * Save / Cancel / Reset — Milestone 1 UI only.
- * No handlers (Save / Cancel / Reset logic deferred).
- */
-export function FormActionsBar() {
+interface FormActionsBarProps {
+  mode: 'create' | 'view' | 'edit'
+  saving: boolean
+  onSave: () => void
+  onCancel: () => void
+  onReset: () => void
+}
+
+/** Bottom-right coral action buttons — matches DBM Create Case. */
+export function FormActionsBar({ mode, saving, onSave, onCancel, onReset }: FormActionsBarProps) {
+  const readOnly = mode === 'view'
+
   return (
-    <div className="cases-toolbar" data-testid="billing-form-actions">
-      <button type="button" className="cases-action-btn" data-testid="billing-save">
-        Save
+    <div className="billing-actions" data-testid="billing-form-actions">
+      <button
+        type="button"
+        className="billing-btn"
+        data-testid="billing-cancel"
+        disabled={saving}
+        onClick={onCancel}
+      >
+        {readOnly ? 'Back' : 'Cancel'}
       </button>
-      <button type="button" className="cases-btn cases-btn--ghost" data-testid="billing-cancel">
-        Cancel
-      </button>
-      <button type="button" className="cases-btn cases-btn--ghost" data-testid="billing-reset">
-        Reset
-      </button>
+      {!readOnly ? (
+        <button
+          type="button"
+          className="billing-btn"
+          data-testid="billing-reset"
+          disabled={saving}
+          onClick={onReset}
+        >
+          Reset
+        </button>
+      ) : null}
+      {!readOnly ? (
+        <button
+          type="button"
+          className="billing-btn"
+          data-testid="billing-save"
+          disabled={saving}
+          onClick={onSave}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      ) : null}
     </div>
   )
 }

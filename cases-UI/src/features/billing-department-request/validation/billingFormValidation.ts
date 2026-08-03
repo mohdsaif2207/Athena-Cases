@@ -1,5 +1,99 @@
+import { parseAppDate } from '@/features/cases/utils/dateFormat'
+import type { BillingFormValues } from '@/features/billing-department-request/utils/billingFormMapper'
+import {
+  PRIORITY_OPTIONS,
+  STATUS_OPTIONS,
+} from '@/features/billing-department-request/constants/billingEnums'
+
+export type BillingFieldErrors = Partial<Record<keyof BillingFormValues, string>>
+
+const PRIORITY_RE = /^(High|Medium|Low)$/
+const STATUS_RE = /^(Requested|In Progress|Killed|On Hold|Incomplete|Completed)$/
+const INT_RE = /^-?\d+$/
+/** Mirrors @Digits(integer=16, fraction=2) — optional sign, up to 16 integer digits, up to 2 fraction. */
+const DECIMAL_RE = /^-?\d{1,16}(\.\d{1,2})?$/
+
 /**
- * Client-side Billing form validation — Phase 5.
- * Placeholder so the planned feature folder layout exists.
+ * Client-side checks that mirror BillingDepartmentRequestCreate/UpdateRequest Bean Validation.
+ * Server remains source of truth.
  */
-export {}
+export function validateBillingForm(
+  values: BillingFormValues,
+  mode: 'create' | 'edit',
+): BillingFieldErrors {
+  const errors: BillingFieldErrors = {}
+
+  if (!values.priority?.trim()) {
+    errors.priority = 'priority must be High, Medium, or Low'
+  } else if (!PRIORITY_RE.test(values.priority) || !(PRIORITY_OPTIONS as readonly string[]).includes(values.priority)) {
+    errors.priority = 'priority must be High, Medium, or Low'
+  }
+
+  if (!values.status?.trim()) {
+    errors.status = 'status must be a defined case status value'
+  } else if (!STATUS_RE.test(values.status) || !(STATUS_OPTIONS as readonly string[]).includes(values.status)) {
+    errors.status = 'status must be a defined case status value'
+  }
+
+  const description = values.requestDescription.trim()
+  if (!description) {
+    errors.requestDescription = 'must not be blank'
+  } else if (description.length > 5000) {
+    errors.requestDescription = 'size must be between 0 and 5000'
+  }
+
+  if (values.reasonForImportance.length > 500) {
+    errors.reasonForImportance = 'size must be between 0 and 500'
+  }
+  if (values.campaignId.length > 64) {
+    errors.campaignId = 'size must be between 0 and 64'
+  }
+  if (values.assignedTo.length > 64) {
+    errors.assignedTo = 'size must be between 0 and 64'
+  }
+  if (values.billingInstitution.length > 255) {
+    errors.billingInstitution = 'size must be between 0 and 255'
+  }
+  if (values.billSet.length > 255) {
+    errors.billSet = 'size must be between 0 and 255'
+  }
+  if (values.billingCycle.length > 255) {
+    errors.billingCycle = 'size must be between 0 and 255'
+  }
+  if (values.hardDeclineCodes.length > 500) {
+    errors.hardDeclineCodes = 'size must be between 0 and 500'
+  }
+  if (values.holdReason.length > 1000) {
+    errors.holdReason = 'size must be between 0 and 1000'
+  }
+
+  if (values.approxNumberOfCoverages.trim()) {
+    if (!INT_RE.test(values.approxNumberOfCoverages.trim())) {
+      errors.approxNumberOfCoverages = 'must be a number'
+    }
+  }
+
+  if (values.approxRevenueImpact.trim()) {
+    if (!DECIMAL_RE.test(values.approxRevenueImpact.trim())) {
+      errors.approxRevenueImpact = 'numeric value out of bounds (<16 digits>.<2 digits> expected)'
+    }
+  }
+
+  for (const key of [
+    'requestedDueDate',
+    'effectiveDate',
+    'anticipatedReleaseDate',
+    'targetPostDate',
+  ] as const) {
+    const raw = values[key].trim()
+    if (raw && !parseAppDate(raw)) {
+      errors[key] = 'Enter a valid date as mm/dd/yyyy.'
+    }
+  }
+
+  if (mode === 'edit' && values.version == null) {
+    errors.version = 'version is required'
+  }
+
+  return errors
+}

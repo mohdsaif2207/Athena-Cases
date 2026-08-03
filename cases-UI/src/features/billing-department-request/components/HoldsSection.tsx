@@ -1,72 +1,96 @@
+import { BillingFieldLabel } from '@/features/billing-department-request/components/BillingFieldLabel'
 import { HoldLevelDualListbox } from '@/features/billing-department-request/components/HoldLevelDualListbox'
 import { BILLING_HOLD_TYPE_OPTIONS } from '@/features/billing-department-request/constants/billingEnums'
-import type { BillingCreateFormValues } from '@/features/billing-department-request/types/billingTypes'
+import type { BillingHoldLevelOption } from '@/features/billing-department-request/constants/billingEnums'
+import type { BillingFormValues } from '@/features/billing-department-request/utils/billingFormMapper'
+import type { BillingFieldErrors } from '@/features/billing-department-request/validation/billingFormValidation'
 
 interface HoldsSectionProps {
-  values: BillingCreateFormValues
-  onChange: <K extends keyof BillingCreateFormValues>(
-    key: K,
-    value: BillingCreateFormValues[K],
-  ) => void
+  values: BillingFormValues
+  readOnly: boolean
+  errors: BillingFieldErrors
+  holdLevelOptions: string[]
+  onChange: <K extends keyof BillingFormValues>(key: K, value: BillingFormValues[K]) => void
 }
 
-/**
- * Holds section fields — LLD FR-012 / FR-019 / user story.
- * Segment ID and Product Name live in General (same bindings); Hold by Product is separate.
- */
-export function HoldsSection({ values, onChange }: HoldsSectionProps) {
+function FieldError({ message, testId }: { message?: string; testId: string }) {
+  if (!message) return null
   return (
-    <section className="cases-advanced" aria-label="Holds" data-testid="billing-holds-section">
-      <h2 className="cases-queue__title">Holds</h2>
-      <div className="cases-advanced__grid">
-        <label className="cases-field">
-          <span>Billing Hold Type</span>
-          <select
-            value={values.billingHoldType}
-            onChange={(e) =>
-              onChange('billingHoldType', e.target.value as BillingCreateFormValues['billingHoldType'])
-            }
-            data-testid="billing-hold-type"
-          >
-            <option value="">Select</option>
-            {BILLING_HOLD_TYPE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        </label>
+    <p className="billing-field__error" role="alert" data-testid={testId}>
+      {message}
+    </p>
+  )
+}
 
-        <div className="cases-field cases-field--full">
-          <span>Billing Hold Level</span>
-          <HoldLevelDualListbox
-            holdType={values.billingHoldType}
-            selected={values.holdLevelCodes}
-            onChange={(next) => onChange('holdLevelCodes', next)}
-          />
+export function HoldsSection({
+  values,
+  readOnly,
+  errors,
+  holdLevelOptions,
+  onChange,
+}: HoldsSectionProps) {
+  return (
+    <section className="billing-section" aria-label="Holds" data-testid="billing-holds-section">
+      <h2 className="billing-section__header">Holds</h2>
+      <div className="billing-section__body">
+        <div className="billing-grid">
+          <label className="billing-field">
+            <BillingFieldLabel>Billing Hold Type</BillingFieldLabel>
+            <select
+              value={values.billingHoldType}
+              disabled={readOnly}
+              onChange={(e) =>
+                onChange('billingHoldType', e.target.value as BillingFormValues['billingHoldType'])
+              }
+              data-testid="billing-hold-type"
+            >
+              <option value="">Select</option>
+              {BILLING_HOLD_TYPE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="billing-field billing-field--full">
+            <BillingFieldLabel>Billing Hold Level</BillingFieldLabel>
+            <HoldLevelDualListbox
+              availableOptions={holdLevelOptions}
+              selected={values.holdLevelCodes}
+              readOnly={readOnly}
+              onChange={(next) => onChange('holdLevelCodes', next as BillingHoldLevelOption[])}
+            />
+            <FieldError message={errors.holdLevelCodes} testId="billing-hold-level-error" />
+          </div>
+
+          <label className="billing-field billing-field--full">
+            <BillingFieldLabel>Hold Reason</BillingFieldLabel>
+            <input
+              type="text"
+              value={values.holdReason}
+              maxLength={1000}
+              readOnly={readOnly}
+              onChange={(e) => onChange('holdReason', e.target.value)}
+              data-testid="billing-hold-reason"
+              aria-invalid={Boolean(errors.holdReason)}
+            />
+            <FieldError message={errors.holdReason} testId="billing-hold-reason-error" />
+          </label>
+
+          <label className="billing-field">
+            <BillingFieldLabel>Billing Hold by Product</BillingFieldLabel>
+            <select
+              value={values.billingHoldByProductId}
+              disabled={readOnly}
+              onChange={(e) => onChange('billingHoldByProductId', e.target.value)}
+              data-testid="billing-hold-by-product"
+            >
+              <option value="">Select</option>
+            </select>
+            <FieldError message={errors.billingHoldByProductId} testId="billing-hold-by-product-error" />
+          </label>
         </div>
-
-        <label className="cases-field cases-field--full">
-          <span>Hold Reason</span>
-          <input
-            type="text"
-            value={values.holdReason}
-            maxLength={1000}
-            onChange={(e) => onChange('holdReason', e.target.value)}
-            data-testid="billing-hold-reason"
-          />
-        </label>
-
-        <label className="cases-field">
-          <span>Billing Hold by Product</span>
-          <select
-            value={values.billingHoldByProductId}
-            onChange={(e) => onChange('billingHoldByProductId', e.target.value)}
-            data-testid="billing-hold-by-product"
-          >
-            <option value="">Select</option>
-          </select>
-        </label>
       </div>
     </section>
   )

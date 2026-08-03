@@ -1,80 +1,101 @@
-import type {
-  BillingExtractTypeOption,
-  BillingHoldLevelOption,
-  BillingHoldTypeOption,
-  PreNoteRequestTypeOption,
-  PriorHardDeclinesOption,
-  PriorityOption,
-  RequestTypeOption,
-  StatusOption,
-} from '@/features/billing-department-request/constants/billingEnums'
+/** Billing API DTO shapes — mirror backend records / @JsonValue enums. */
 
-/**
- * Create-form UI model — mirrors LLD field catalogue (no API mapping yet).
- * Lookup-backed ids stay strings until Phase 4 wiring.
- */
-export interface BillingCreateFormValues {
-  requestType: RequestTypeOption | ''
-  clientId: string
-  campaignId: string
-  assignedTo: string
-  priority: PriorityOption
-  status: StatusOption
-  reasonForImportance: string
-  dailyIssueReport: boolean
-  approxNumberOfCoverages: string
-  approxRevenueImpact: string
-  requestedDueDate: string
-  parentCaseId: string
-  effectiveDate: string
-  segmentId: string
-  productId: string
-  anticipatedReleaseDate: string
-  requestDescription: string
-  billingExtractType: BillingExtractTypeOption | ''
-  preNoteRequestType: PreNoteRequestTypeOption | ''
-  billingInstitution: string
-  targetPostDate: string
-  billSet: string
-  billingCycle: string
-  priorHardDeclines: PriorHardDeclinesOption | ''
-  hardDeclineCodes: string
-  billingHoldType: BillingHoldTypeOption | ''
-  holdLevelCodes: BillingHoldLevelOption[]
-  holdReason: string
-  billingHoldByProductId: string
+export interface LookupItemDto {
+  id: string
+  code: string
+  label: string
 }
 
-export function createDefaultBillingFormValues(): BillingCreateFormValues {
-  return {
-    requestType: '',
-    clientId: '',
-    campaignId: '',
-    assignedTo: '',
-    priority: 'Medium',
-    status: 'Requested',
-    reasonForImportance: '',
-    dailyIssueReport: false,
-    approxNumberOfCoverages: '',
-    approxRevenueImpact: '',
-    requestedDueDate: '',
-    parentCaseId: '',
-    effectiveDate: '',
-    segmentId: '',
-    productId: '',
-    anticipatedReleaseDate: '',
-    requestDescription: '',
-    billingExtractType: '',
-    preNoteRequestType: '',
-    billingInstitution: '',
-    targetPostDate: '',
-    billSet: '',
-    billingCycle: '',
-    priorHardDeclines: '',
-    hardDeclineCodes: '',
-    billingHoldType: '',
-    holdLevelCodes: [],
-    holdReason: '',
-    billingHoldByProductId: '',
-  }
+export interface BillingAssigneeDto {
+  username: string
+  displayName: string
+}
+
+export interface HoldLevelsLookupDto {
+  available: string[]
+}
+
+/** Response from create / get / update — LLD §15.3 */
+export interface BillingDepartmentRequestResponseDto {
+  caseId: number
+  caseNumber: string
+  businessCaseId: string | null
+  caseType: string | null
+  caseOwner: string | null
+  assignedTo: string | null
+  priority: string | null
+  status: string | null
+  parentCaseId: number | null
+  parentCaseNumber: string | null
+  requestType: string | null
+  clientId: number | null
+  clientName: string | null
+  campaignId: string | null
+  reasonForImportance: string | null
+  dailyIssueReport: boolean
+  approxNumberOfCoverages: number | null
+  approxRevenueImpact: number | string | null
+  requestedDueDate: string | null
+  effectiveDate: string | null
+  segmentId: number | null
+  segmentName: string | null
+  productId: number | null
+  productName: string | null
+  anticipatedReleaseDate: string | null
+  requestDescription: string
+  billingExtractType: string | null
+  preNoteRequestType: string | null
+  billingInstitution: string | null
+  targetPostDate: string | null
+  billSet: string | null
+  billingCycle: string | null
+  priorHardDeclines: string | null
+  hardDeclineCodes: string | null
+  billingHoldType: string | null
+  holdLevelCodes: string[] | null
+  holdReason: string | null
+  billingHoldByProductId: number | null
+  version: number | null
+  createdAt: string | null
+  updatedAt: string | null
+  workflowId: number | null
+  workflowStatus: string | null
+}
+
+/** POST body — BillingDepartmentRequestCreateRequest */
+export interface BillingDepartmentRequestCreatePayload {
+  requestType: string | null
+  clientId: number | null
+  campaignId: string | null
+  assignedTo: string | null
+  priority: string
+  status: string
+  reasonForImportance: string | null
+  dailyIssueReport: boolean | null
+  approxNumberOfCoverages: number | null
+  approxRevenueImpact: number | null
+  requestedDueDate: string | null
+  parentCaseId: number | null
+  effectiveDate: string | null
+  segmentId: number | null
+  productId: number | null
+  anticipatedReleaseDate: string | null
+  requestDescription: string
+  billingExtractType: string | null
+  preNoteRequestType: string | null
+  billingInstitution: string | null
+  targetPostDate: string | null
+  billSet: string | null
+  billingCycle: string | null
+  priorHardDeclines: string | null
+  hardDeclineCodes: string | null
+  billingHoldType: string | null
+  holdLevelCodes: string[] | null
+  holdReason: string | null
+  billingHoldByProductId: number | null
+}
+
+/** PUT body — BillingDepartmentRequestUpdateRequest */
+export type BillingDepartmentRequestUpdatePayload = BillingDepartmentRequestCreatePayload & {
+  version: number
 }
