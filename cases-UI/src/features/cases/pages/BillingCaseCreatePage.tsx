@@ -1,10 +1,9 @@
-import { CaseCreatePlaceholder } from '@/features/cases/components/CaseCreatePlaceholder'
+import { BillingDepartmentRequestPage } from '@/features/billing-department-request'
 
+/**
+ * Route entry for `/cases/new/billing`.
+ * Delegates to the Billing feature module; keeps the shared cases route map stable.
+ */
 export function BillingCaseCreatePage() {
-  return (
-    <CaseCreatePlaceholder
-      title="Billing Department Request"
-      testId="billing-case-create-page"
-    />
-  )
+  return <BillingDepartmentRequestPage />
 }
