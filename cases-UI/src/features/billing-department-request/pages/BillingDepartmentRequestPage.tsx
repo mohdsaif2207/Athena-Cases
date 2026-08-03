@@ -1,16 +1,10 @@
 import { Link } from 'react-router-dom'
-import { ExtractsSection } from '@/features/billing-department-request/components/ExtractsSection'
-import { FormActionsBar } from '@/features/billing-department-request/components/FormActionsBar'
-import { GeneralSection } from '@/features/billing-department-request/components/GeneralSection'
-import { HoldsSection } from '@/features/billing-department-request/components/HoldsSection'
+import { BillingRequestFormConnected } from '@/features/billing-department-request/components/BillingRequestForm'
 import '@/features/cases/pages/CasesSearchPage.css'
 
 /**
- * Billing Department Request Create screen skeleton — Phase 2.
- *
- * Visual shell only: matches existing Create Case layout
- * (`case-create-placeholder` + shared `cases-*` classes).
- * No form state, validation, or API calls yet.
+ * Billing Department Request Create screen — Milestone 1 UI complete.
+ * No API integration, validation, or Save/Cancel/Reset behaviour yet.
  */
 export function BillingDepartmentRequestPage() {
   return (
@@ -22,12 +16,7 @@ export function BillingDepartmentRequestPage() {
         </Link>
       </header>
 
-      <div className="cases-search" data-testid="billing-request-form">
-        <GeneralSection />
-        <ExtractsSection />
-        <HoldsSection />
-        <FormActionsBar />
-      </div>
+      <BillingRequestFormConnected />
     </div>
   )
 }
