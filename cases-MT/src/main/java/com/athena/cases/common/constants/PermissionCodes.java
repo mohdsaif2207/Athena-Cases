@@ -2,6 +2,7 @@ package com.athena.cases.common.constants;
 
 /**
  * Central permission codes. Exact product list may expand — keep additions Lead-owned.
+ * Codes must match rows seeded in Flyway IAM migrations.
  */
 public final class PermissionCodes {
 

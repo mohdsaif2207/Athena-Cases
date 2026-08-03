@@ -40,20 +40,23 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void notifyTeam(NotifyTeamCommand command) {
-        CaseEntity caseEntity = caseRepository.findById(command.caseId())
-                .orElseThrow(() -> new ResourceNotFoundException("Case", String.valueOf(command.caseId())));
         TeamEntity team = teamRepository.findByCode(command.teamCode())
                 .orElseThrow(() -> new ResourceNotFoundException("Team", command.teamCode()));
+
+        // Platform `cases` row optional — ExRT persists in case_header with its own id
+        CaseEntity caseEntity = caseRepository.findById(command.caseId()).orElse(null);
+        String caseNumber = caseEntity != null ? caseEntity.getCaseNumber() : "CASE-" + command.caseId();
+        String subject = caseEntity != null ? caseEntity.getSubject() : "ExRT Request";
 
         Instant now = Instant.now();
         String actor = currentUserService.requirePrincipal().getUsername();
         NotificationEntity entity = new NotificationEntity();
-        entity.setCaseId(caseEntity.getId());
+        entity.setCaseId(command.caseId());
         entity.setReceivingTeamId(team.getId());
-        entity.setMessageKey("NTF-" + caseEntity.getCaseNumber());
-        entity.setMessageId("MSG-" + caseEntity.getId());
-        entity.setMessageName(caseEntity.getSubject() + " Notice");
-        entity.setMessageObject(caseEntity.getCaseNumber());
+        entity.setMessageKey("NTF-" + caseNumber);
+        entity.setMessageId("MSG-" + command.caseId());
+        entity.setMessageName(subject + " Notice");
+        entity.setMessageObject(caseNumber);
         entity.setMessage(command.message());
         entity.setReceivedAt(now);
         entity.setDetails(command.deepLink());
@@ -64,7 +67,7 @@ public class NotificationServiceImpl implements NotificationService {
         entity.setVersion(1);
 
         notificationRepository.save(entity);
-        log.info("team notification created - caseId={} team={}", caseEntity.getId(), team.getCode());
+        log.info("team notification created - caseId={} team={}", command.caseId(), team.getCode());
     }
 
     @Override
@@ -73,15 +76,13 @@ public class NotificationServiceImpl implements NotificationService {
         // User-targeted channel reuses team queue storage until a dedicated user inbox lands.
         log.info("notifyUser deferred to team channel - caseId={} userId={}",
                 command.caseId(), command.userId());
-        CaseEntity caseEntity = caseRepository.findById(command.caseId())
-                .orElseThrow(() -> new ResourceNotFoundException("Case", String.valueOf(command.caseId())));
         UserPrincipal principal = currentUserService.requirePrincipal();
         List<String> teamCodes = principal.getReceivingTeamCodes();
         if (teamCodes.isEmpty()) {
             throw new ForbiddenException("No receiving team available for notification");
         }
         notifyTeam(new NotifyTeamCommand(
-                caseEntity.getId(),
+                command.caseId(),
                 teamCodes.getFirst(),
                 command.message(),
                 command.deepLink()));
@@ -110,6 +111,9 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private NotificationQueueItem toQueueItem(NotificationEntity n) {
+        String teamCode = teamRepository.findById(n.getReceivingTeamId())
+                .map(TeamEntity::getCode)
+                .orElse("");
         return new NotificationQueueItem(
                 n.getId(),
                 "NTF-" + n.getId(),
@@ -120,7 +124,12 @@ public class NotificationServiceImpl implements NotificationService {
                 nullToEmpty(n.getMessageObject()),
                 n.getMessage(),
                 n.getReceivedAt(),
-                nullToEmpty(n.getDetails()));
+                n.getUpdatedAt(),
+                nullToEmpty(n.getDetails()),
+                nullToEmpty(n.getCreatedBy()),
+                "",
+                "",
+                teamCode);
     }
 
     private void requireNotifView() {

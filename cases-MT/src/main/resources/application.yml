@@ -3,6 +3,10 @@ spring:
     name: cases-mt
   profiles:
     default: dev
+  # Fallback import (IDE/Maven). Primary loader: DotEnvEnvironmentPostProcessor
+  # which finds Athena-Cases/.env or cases-MT/.env regardless of minor path quirks.
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
   jpa:
     open-in-view: false
     hibernate:
@@ -13,11 +17,15 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+    # Required for shared Postgres when parallel feature branches stamp interleaved
+    # versions (e.g. IAM 1300/1800/1900 after ExRT tip 1945). Validation stays on.
+    out-of-order: true
     locations: classpath:db/migration/common,classpath:db/migration/lookups,classpath:db/migration/audit,classpath:db/migration/features
     baseline-on-migrate: true
 
 server:
-  port: ${SERVER_PORT:8080}
+  # Standardized local/backend port — do not change to 8080
+  port: ${SERVER_PORT:8090}
 
 app:
   cors:
@@ -37,3 +45,7 @@ logging:
   level:
     root: ${LOG_LEVEL:INFO}
     com.athena.cases: INFO
+    com.athena.cases.features.exrt: INFO
+    org.flywaydb: INFO
+    org.springframework.boot.autoconfigure.flyway: INFO
+    org.springframework.boot.flyway: INFO

@@ -85,7 +85,7 @@ class BillingDepartmentRequestServiceImplTest {
         when(billingRepository.save(any(BillingDepartmentRequest.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(workflowService.getByCaseId(caseId))
-                .thenReturn(new WorkflowRef(9L, caseId, "BILLING_OPS_TEAM", "Pending Assignment"));
+                .thenReturn(new WorkflowRef(9L, caseId, "BILLING_OPS", "BILLING_OPS_TEAM", "Pending Assignment"));
 
         BillingDepartmentRequestResponse response = service.create(minimalCreateRequest());
 
@@ -126,7 +126,7 @@ class BillingDepartmentRequestServiceImplTest {
         BillingDepartmentRequest entity = persistedEntity(caseId, "BIL000001");
         when(billingRepository.findByCaseId(caseId)).thenReturn(Optional.of(entity));
         when(workflowService.getByCaseId(caseId))
-                .thenReturn(new WorkflowRef(9L, caseId, "BILLING_OPS_TEAM", "PENDING_ASSIGNMENT"));
+                .thenReturn(new WorkflowRef(9L, caseId, "BILLING_OPS", "BILLING_OPS_TEAM", "PENDING_ASSIGNMENT"));
 
         BillingDepartmentRequestResponse response = service.getByCaseId(caseId);
 

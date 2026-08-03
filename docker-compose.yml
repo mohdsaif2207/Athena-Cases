@@ -1,0 +1,47 @@
+# Athena Cases — local / shared Docker Compose
+# Backend listens on 8090. UI on 3000 with /api proxied to backend.
+# Requires a root .env (copy from .env.example) with DB_URL / DB_USER / DB_PASSWORD.
+
+services:
+  cases-mt:
+    build:
+      context: ./cases-MT
+      dockerfile: Dockerfile
+      args:
+        SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+    image: athena-cases-mt:local
+    container_name: athena-cases-mt
+    ports:
+      - "${MT_HOST_PORT:-8090}:8090"
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: "8090"
+      # Bind to DB_* (see application-dev.yml). Do NOT set empty SPRING_DATASOURCE_* —
+      # blank overrides wipe the JDBC URL and Spring falls back to H2 while keeping the PG driver.
+      DB_URL: ${DB_URL:?Set DB_URL in Athena-Cases/.env — copy from .env.example}
+      DB_USER: ${DB_USER:?Set DB_USER in Athena-Cases/.env}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in Athena-Cases/.env}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/api/v1/lookups/exrt/carriers"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+    restart: unless-stopped
+
+  cases-ui:
+    build:
+      context: ./cases-UI
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    image: athena-cases-ui:local
+    container_name: athena-cases-ui
+    ports:
+      - "${UI_HOST_PORT:-3000}:80"
+    depends_on:
+      cases-mt:
+        condition: service_healthy
+    restart: unless-stopped

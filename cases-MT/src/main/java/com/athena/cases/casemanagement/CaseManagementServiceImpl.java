@@ -94,7 +94,11 @@ public class CaseManagementServiceImpl implements CaseManagementService {
             if (!team.isActive()) {
                 continue;
             }
-            workflowService.start(new StartWorkflowCommand(saved.getId(), team.getCode(), "Pending Assignment"));
+            workflowService.start(new StartWorkflowCommand(
+                    saved.getId(),
+                    caseType.getCode(),
+                    team.getCode(),
+                    "Pending Assignment"));
             notificationService.notifyTeam(new NotifyTeamCommand(
                     saved.getId(),
                     team.getCode(),

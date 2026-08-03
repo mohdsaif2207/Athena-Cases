@@ -123,8 +123,24 @@ class LookupServiceImplTest {
     @Test
     void should_returnCampaignsAndProductsFromMockRegistry() {
         assertThat(service.listActiveCampaigns()).isNotEmpty();
-        assertThat(service.listProducts(null)).extracting(LookupItem::id).contains("101");
+        assertThat(service.listProducts(null)).extracting(LookupItem::id).contains("P10");
         assertThat(service.listSegments("CLIENT001")).isNotEmpty();
+    }
+
+    @Test
+    void should_returnDevClients_when_searchClientsCalled() {
+        assertThat(service.searchClients("")).extracting(LookupItem::code)
+                .containsExactly("C100", "C200", "C300");
+        assertThat(service.searchClients("summit")).extracting(LookupItem::label)
+                .containsExactly("Summit Bank");
+    }
+
+    @Test
+    void should_returnDevProducts_when_listProductsCalled() {
+        assertThat(service.listProducts("")).extracting(LookupItem::code)
+                .containsExactly("P10", "P20", "P30");
+        assertThat(service.listProducts("life")).extracting(LookupItem::label)
+                .containsExactly("Term Life");
     }
 
     private static CaseTypeEntity type(Long id, String code, String name) {

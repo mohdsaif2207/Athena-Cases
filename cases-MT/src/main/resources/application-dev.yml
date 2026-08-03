@@ -1,17 +1,20 @@
-# Local development — PostgreSQL.
-# URL / username / password: application.properties (do not set H2 defaults here).
+# Dev profile — PostgreSQL (ExRT + DBM + IAM). Credentials from Athena-Cases/.env only.
+# Schema follows DB_URL (search_path / currentSchema). Do NOT hardcode a schema here:
+# forcing a schema that differs from .env makes login/create hit a different schema
+# than the one you inspect in the DB client.
 spring:
   datasource:
-    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL:?Set DB_URL in Athena-Cases/.env}
+    username: ${DB_USER:?Set DB_USER in Athena-Cases/.env}
+    password: ${DB_PASSWORD:?Set DB_PASSWORD in Athena-Cases/.env}
+    driver-class-name: ${DB_DRIVER:org.postgresql.Driver}
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: false
     properties:
       hibernate:
-        default_schema: cases_mt
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   flyway:
-    schemas: cases_mt
-    default-schema: cases_mt
     create-schemas: true
     # Shared RDS may have teammate migrations not present in this branch yet.
     ignore-migration-patterns: "*:missing"
@@ -34,3 +37,5 @@ logging:
   level:
     root: INFO
     com.athena.cases: DEBUG
+    com.athena.cases.features.exrt: INFO
+    com.athena.cases.features.dbm: DEBUG

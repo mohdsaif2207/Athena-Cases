@@ -1,10 +1,11 @@
 package com.athena.cases.common.entity;
 
+import java.util.Objects;
+
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
-import java.util.Objects;
 
 /**
  * Shared surrogate-key base for domain entities.

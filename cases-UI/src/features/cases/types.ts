@@ -90,8 +90,11 @@ export interface WorkflowRecord {
   owner: string
   priority: string
   receivedDate: string
+  updatedDate: string
   action: string
   logs: string
+  createdBy: string
+  receivingTeamCode: string
 }
 
 export interface NotificationRecord {
@@ -104,5 +107,25 @@ export interface NotificationRecord {
   messageObject: string
   message: string
   receivedDate: string
+  updatedDate: string
   details: string
+  createdBy: string
+  priority: string
+  owner: string
+  receivingTeamCode: string
+}
+
+/** Fields shown in Home queue View/Edit detail popup. */
+export interface QueueDetailFields {
+  messageId: string
+  messageName: string
+  messageKey: string
+  message: string
+  priority: string
+  owner: string
+  receivedDate: string
+  updatedDate: string
+  senderSystem: string
+  senderUserId: string
+  senderUserGroup: string
 }

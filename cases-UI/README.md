@@ -27,4 +27,4 @@ npm run dev
 Successful login redirects to the Home screen.
 
 Optional: copy `.env.example` to `.env.development` and set `VITE_API_BASE_URL`.  
-If unset, the Vite dev proxy forwards `/api` to `http://localhost:8080`.
+If unset, the Vite dev proxy forwards `/api` to `http://localhost:8090`.

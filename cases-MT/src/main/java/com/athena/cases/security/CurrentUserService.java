@@ -2,6 +2,7 @@ package com.athena.cases.security;
 
 /**
  * Resolves the authenticated principal for service-layer use.
+ * ExRT + platform auth share this port.
  */
 public interface CurrentUserService {
 
@@ -11,5 +12,6 @@ public interface CurrentUserService {
 
     boolean hasPermission(String permissionCode);
 
+    /** Full security principal (JWT-backed). Required by workflow/notification queue APIs. */
     UserPrincipal requirePrincipal();
 }

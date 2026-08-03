@@ -42,24 +42,28 @@ public class WorkflowServiceImpl implements WorkflowService {
     public WorkflowRef start(StartWorkflowCommand command) {
         // Called as a side-effect of case create; list/get still require WF_VIEW + receiving team.
         currentUserService.requirePrincipal();
-        CaseEntity caseEntity = caseRepository.findById(command.caseId())
-                .orElseThrow(() -> new ResourceNotFoundException("Case", String.valueOf(command.caseId())));
         TeamEntity team = teamRepository.findByCode(command.receiverTeamCode())
                 .orElseThrow(() -> new ResourceNotFoundException("Team", command.receiverTeamCode()));
+
+        // Platform cases table OR ExRT case_header (feature cases may not be in `cases`)
+        CaseEntity caseEntity = caseRepository.findById(command.caseId()).orElse(null);
+        String caseNumber = caseEntity != null ? caseEntity.getCaseNumber() : "CASE-" + command.caseId();
+        String subject = caseEntity != null ? caseEntity.getSubject() : "ExRT Request";
+        String priority = caseEntity != null ? caseEntity.getPriority() : "MEDIUM";
 
         Instant now = Instant.now();
         String actor = currentUserService.requirePrincipal().getUsername();
         WorkflowEntity entity = new WorkflowEntity();
-        entity.setCaseId(caseEntity.getId());
+        entity.setCaseId(command.caseId());
         entity.setReceivingTeamId(team.getId());
-        entity.setMessageKey("WF-" + caseEntity.getCaseNumber());
-        entity.setMessageId("MSG-" + caseEntity.getId());
-        entity.setMessageName(caseEntity.getSubject() + " Workflow");
-        entity.setMessageObject(caseEntity.getCaseNumber());
+        entity.setMessageKey("WF-" + caseNumber);
+        entity.setMessageId("MSG-" + command.caseId());
+        entity.setMessageName(subject + " Workflow");
+        entity.setMessageObject(caseNumber);
         entity.setStatus(command.initialStatusCode() == null || command.initialStatusCode().isBlank()
                 ? "Pending Assignment"
                 : command.initialStatusCode());
-        entity.setPriority(caseEntity.getPriority());
+        entity.setPriority(priority);
         entity.setReceivedAt(now);
         entity.setActionLabel("Assign");
         entity.setOwnerName(team.getName());
@@ -110,6 +114,9 @@ public class WorkflowServiceImpl implements WorkflowService {
     }
 
     private WorkflowQueueItem toQueueItem(WorkflowEntity w) {
+        String teamCode = teamRepository.findById(w.getReceivingTeamId())
+                .map(TeamEntity::getCode)
+                .orElse("");
         return new WorkflowQueueItem(
                 w.getId(),
                 "WF-" + w.getId(),
@@ -123,8 +130,11 @@ public class WorkflowServiceImpl implements WorkflowService {
                 nullToEmpty(w.getOwnerName()),
                 w.getPriority(),
                 w.getReceivedAt(),
+                w.getUpdatedAt(),
                 nullToEmpty(w.getActionLabel()),
-                nullToEmpty(w.getLogs()));
+                nullToEmpty(w.getLogs()),
+                nullToEmpty(w.getCreatedBy()),
+                teamCode);
     }
 
     private void assertReceivingTeamAccess(Long receivingTeamId) {
@@ -142,7 +152,12 @@ public class WorkflowServiceImpl implements WorkflowService {
     }
 
     private static WorkflowRef toRef(WorkflowEntity entity, String teamCode) {
-        return new WorkflowRef(entity.getId(), entity.getCaseId(), teamCode, entity.getStatus());
+        return new WorkflowRef(
+                entity.getId(),
+                entity.getCaseId(),
+                entity.getMessageKey(),
+                teamCode,
+                entity.getStatus());
     }
 
     private static String nullToEmpty(String value) {

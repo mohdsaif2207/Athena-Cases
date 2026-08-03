@@ -1,0 +1,14 @@
+target/
+*.class
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+*.md
+.idea/
+.vscode/
+Dockerfile
+docker-compose*.yml
+.mvn/wrapper/maven-wrapper.jar
+src/test/

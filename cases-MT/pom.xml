@@ -10,13 +10,15 @@
 	</parent>
 	<groupId>com.athena</groupId>
 	<artifactId>cases-mt</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.9.0</version>
 	<name>cases-mt</name>
 	<description>Athena Cases Backend</description>
 
 	<properties>
 		<java.version>21</java.version>
 		<jjwt.version>0.12.6</jjwt.version>
+		<!-- Align with spring-boot-dependencies 4.1.0 managed Testcontainers BOM -->
+		<testcontainers.version>2.0.5</testcontainers.version>
 	</properties>
 
 	<dependencies>
@@ -48,7 +50,6 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
@@ -88,13 +89,45 @@
 			<artifactId>spring-boot-starter-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Test-only: real PostgreSQL for Flyway (production migrations use TIMESTAMPTZ, etc.) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.testcontainers</groupId>
+				<artifactId>testcontainers-bom</artifactId>
+				<version>${testcontainers.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<build>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<!-- Ensure ../.env resolves to monorepo root when running from cases-MT -->
+					<workingDirectory>${project.basedir}</workingDirectory>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

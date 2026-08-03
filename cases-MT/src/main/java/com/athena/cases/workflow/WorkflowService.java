@@ -12,5 +12,6 @@ public interface WorkflowService {
 
     WorkflowRef getByCaseId(Long caseId);
 
+    /** Queue rows visible to the caller's receiving teams (requires WF_VIEW). */
     List<WorkflowQueueItem> listAuthorizedQueue();
 }

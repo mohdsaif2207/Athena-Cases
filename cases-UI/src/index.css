@@ -1,9 +1,46 @@
 :root {
+  --exrt-nav: #0d1b5e;
+  --exrt-page-bg: #f5f6fa;
+  --exrt-text: #1e1e1e;
+  --exrt-text-secondary: #555555;
+  --exrt-font: 'Segoe UI', Roboto, sans-serif;
+
+  font-family: var(--exrt-font);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--exrt-text);
+  background: var(--exrt-page-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  width: 100%;
 }
 
 body {
   margin: 0;
   min-width: 320px;
+  background: var(--exrt-page-bg);
+  color: var(--exrt-text);
+  font-family: var(--exrt-font);
+}
+
+#root {
+  max-width: 100%;
+  text-align: left;
+  border: none;
+  display: block;
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchCases } from '@/features/cases/api/casesApi'
 import type { CaseTypeOption } from '@/features/cases/api/lookupApi'
@@ -36,6 +36,7 @@ const PAGE_SIZE = 10
 export function CasesSearchPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const permissions = user?.permissions ?? []
 
   const canCreate = permissions.includes('CASES_CREATE') || permissions.includes('CASES_ACCESS')
@@ -47,6 +48,18 @@ export function CasesSearchPage() {
   const [allCases, setAllCases] = useState<CaseRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [successToast, setSuccessToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    const msg = (location.state as { successMessage?: string } | null)?.successMessage
+    if (!msg) {
+      return
+    }
+    setSuccessToast(msg)
+    navigate(location.pathname, { replace: true, state: {} })
+    const timer = window.setTimeout(() => setSuccessToast(null), 5000)
+    return () => window.clearTimeout(timer)
+  }, [location.pathname, location.state, navigate])
 
   const [columnFilters, setColumnFilters] = useState<ColumnFilterState>({ ...EMPTY_COLUMN_FILTERS })
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilterState>({
@@ -81,6 +94,19 @@ export function CasesSearchPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    const state = location.state as
+      | { dbmCreateSuccess?: boolean; caseNumber?: string }
+      | null
+    if (!state?.dbmCreateSuccess || !state.caseNumber) {
+      return
+    }
+    setToast(`Case created successfully with Case ID ${state.caseNumber}.`)
+    window.setTimeout(() => setToast(null), 4000)
+    navigate(location.pathname, { replace: true, state: null })
+    void load()
+  }, [location.state, location.pathname, navigate, load])
 
   const filtered = useMemo(
     () => applyCaseFilters(allCases, columnFilters, advancedFilters),
@@ -223,6 +249,11 @@ export function CasesSearchPage() {
       {prefsSavedMessage ? (
         <div className="cases-toast" role="status" data-testid="cases-prefs-toast">
           {prefsSavedMessage}
+        </div>
+      ) : null}
+      {successToast ? (
+        <div className="cases-toast" role="status" data-testid="cases-create-success-toast">
+          {successToast}
         </div>
       ) : null}
       {toast ? (

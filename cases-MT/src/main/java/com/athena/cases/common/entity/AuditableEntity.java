@@ -1,9 +1,10 @@
 package com.athena.cases.common.entity;
 
+import java.time.Instant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.Version;
-import java.time.Instant;
 
 /**
  * Audit + optimistic-lock fields shared by business entities.

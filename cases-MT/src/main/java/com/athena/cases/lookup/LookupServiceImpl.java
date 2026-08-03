@@ -15,15 +15,34 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Combined lookup service: RBAC case-types + Billing parent-case search + ExRT/DBM mock masters.
+ */
 @Service
 public class LookupServiceImpl implements LookupService {
 
-    private static final int PARENT_CASE_LOOKUP_LIMIT = 200;
+    private static final int PARENT_CASE_LOOKUP_LIMIT = 50;
 
     private static final Map<String, Integer> CASE_TYPE_DISPLAY_ORDER = Map.of(
             "DBM_WORK_ORDER_REQUEST", 1,
             "EXRT_REQUEST", 2,
             "BILLING_DEPARTMENT_REQUEST", 3);
+
+    /**
+     * ExRT client search corpus (temporary until platform client master exists).
+     */
+    private static final List<LookupItem> DEV_CLIENTS = List.of(
+            new LookupItem("C100", "C100", "Acme Credit Union"),
+            new LookupItem("C200", "C200", "Summit Bank"),
+            new LookupItem("C300", "C300", "Harbor Financial"));
+
+    /**
+     * ExRT product typeahead corpus (temporary until platform product master exists).
+     */
+    private static final List<LookupItem> DEV_PRODUCTS = List.of(
+            new LookupItem("P10", "P10", "Term Life"),
+            new LookupItem("P20", "P20", "Disability"),
+            new LookupItem("P30", "P30", "Accident"));
 
     private final CaseTypeRepository caseTypeRepository;
     private final CaseRepository caseRepository;
@@ -32,8 +51,7 @@ public class LookupServiceImpl implements LookupService {
     public LookupServiceImpl(
             CaseTypeRepository caseTypeRepository,
             CaseRepository caseRepository,
-            CurrentUserService currentUserService
-    ) {
+            CurrentUserService currentUserService) {
         this.caseTypeRepository = caseTypeRepository;
         this.caseRepository = caseRepository;
         this.currentUserService = currentUserService;
@@ -41,7 +59,7 @@ public class LookupServiceImpl implements LookupService {
 
     @Override
     public List<LookupItem> searchClients(String query) {
-        return LookupMockData.filterByQuery(LookupMockData.CLIENTS, query);
+        return filterByQuery(DEV_CLIENTS, query);
     }
 
     @Override
@@ -56,7 +74,7 @@ public class LookupServiceImpl implements LookupService {
 
     @Override
     public List<LookupItem> listProducts(String query) {
-        return LookupMockData.filterByQuery(LookupMockData.PRODUCTS, query);
+        return filterByQuery(DEV_PRODUCTS, query);
     }
 
     /**
@@ -133,6 +151,18 @@ public class LookupServiceImpl implements LookupService {
                 || currentUserService.hasPermission(PermissionCodes.CASES_ACCESS))) {
             throw new ForbiddenException("CASES_VIEW required");
         }
+    }
+
+    private static List<LookupItem> filterByQuery(List<LookupItem> source, String query) {
+        if (query == null || query.isBlank()) {
+            return source;
+        }
+        String needle = query.trim().toLowerCase(Locale.ROOT);
+        return source.stream()
+                .filter(item -> containsIgnoreCase(item.code(), needle)
+                        || containsIgnoreCase(item.label(), needle)
+                        || containsIgnoreCase(item.id(), needle))
+                .toList();
     }
 
     private static boolean matchesParentQuery(CaseEntity c, String queryLower) {
