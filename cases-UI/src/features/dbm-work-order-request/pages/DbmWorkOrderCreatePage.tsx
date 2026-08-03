@@ -1,5 +1,6 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, useEffect, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import type { EventIdLookupItem } from '../api/lookups'
 import { useIsDbmUser } from '../auth/dbmAccess'
 import { useCreateDbmWorkOrder, toUserFriendlyError } from '../hooks/useCreateDbmWorkOrder'
@@ -41,20 +42,29 @@ const TRANSFER_TYPE_OPTIONS = [
   'Termination File',
 ] as const
 const YES_NO_OPTIONS = ['Yes', 'No'] as const
-/** LLD specifies default "Once"; no other values are listed in the story. */
-const FREQUENCY_OPTIONS = ['Once'] as const
+const FREQUENCY_OPTIONS = [
+  'Once',
+  'Daily',
+  'Weekly',
+  'Monthly',
+  'Quarterly',
+  'Yearly',
+] as const
 
 /**
  * Static option lists for fields not covered by GET /api/lookups/*.
  * Labels are presentation values only — not additional form fields.
  */
-const COVERAGE_LEVEL_OPTIONS = ['Platinum', 'Gold', 'Silver', 'Bronze'] as const
+const COVERAGE_LEVEL_OPTIONS = [
+  'Complementary',
+  'Voluntary',
+  'Cancels',
+] as const
 const ACCOUNT_TYPE_OPTIONS = [
-  'Checking',
-  'Savings',
-  'Credit Card',
-  'Loan',
-  'Mortgage',
+  'Share/ESHAR',
+  'Share Draft/ES/DR',
+  'Checking/ECHK',
+  'Savings/ESAV',
 ] as const
 
 function toggleMultiValue(current: string[], value: string): string[] {
@@ -69,11 +79,24 @@ function toggleMultiValue(current: string[], value: string): string[] {
  */
 export function DbmWorkOrderCreatePage() {
   const navigate = useNavigate()
-  const [form, setForm] = useState<DbmCreateFormState>(DEFAULT_DBM_CREATE_FORM)
+  const { user } = useAuth()
+  const loggedInOwner =
+    user?.displayName?.trim() || user?.username?.trim() || 'Logged-in user'
+
+  const [form, setForm] = useState<DbmCreateFormState>(() => ({
+    ...DEFAULT_DBM_CREATE_FORM,
+    caseOwner: loggedInOwner,
+  }))
   const [fieldErrors, setFieldErrors] = useState<DbmCreateFieldErrors>({})
   const [saveError, setSaveError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
+
+  useEffect(() => {
+    setForm((prev) =>
+      prev.caseOwner === loggedInOwner ? prev : { ...prev, caseOwner: loggedInOwner },
+    )
+  }, [loggedInOwner])
 
   const {
     data: lookups,
@@ -157,7 +180,7 @@ export function DbmWorkOrderCreatePage() {
   }
 
   const handleReset = () => {
-    setForm(DEFAULT_DBM_CREATE_FORM)
+    setForm({ ...DEFAULT_DBM_CREATE_FORM, caseOwner: loggedInOwner })
     setFieldErrors({})
     setSaveError(null)
     setSuccessMessage(null)
@@ -198,12 +221,19 @@ export function DbmWorkOrderCreatePage() {
     const payload = toCreateDbmWorkOrderRequest(form)
     createMutation.mutate(payload, {
       onSuccess: (created) => {
-        setForm(DEFAULT_DBM_CREATE_FORM)
-        setFieldErrors({})
         setSaveError(null)
         setSuccessMessage(
           `Case created successfully with Case ID ${created.caseNumber}.`,
         )
+        // Case Details route is not implemented yet — return to Cases grid (AC-11 fallback).
+        navigate('/cases', {
+          replace: true,
+          state: {
+            dbmCreateSuccess: true,
+            caseNumber: created.caseNumber,
+            caseId: created.caseId,
+          },
+        })
       },
       onError: (error) => {
         setSaveError(toUserFriendlyError(error))

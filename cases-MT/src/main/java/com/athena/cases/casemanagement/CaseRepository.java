@@ -10,6 +10,15 @@ public interface CaseRepository extends JpaRepository<CaseEntity, Long> {
 
     Optional<CaseEntity> findByCaseNumber(String caseNumber);
 
+    /**
+     * Highest DBM case number (lexical order matches zero-padded numeric order for DBM######).
+     */
+    @Query("""
+            SELECT MAX(c.caseNumber) FROM CaseEntity c
+            WHERE c.caseNumber LIKE 'DBM%'
+            """)
+    Optional<String> findMaxDbmCaseNumber();
+
     @Query("""
             SELECT c FROM CaseEntity c
             WHERE (:caseTypeIdsEmpty = true OR c.caseTypeId IN :caseTypeIds)

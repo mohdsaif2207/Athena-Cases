@@ -6,6 +6,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,16 +21,14 @@ import com.athena.cases.features.dbm.entity.DbmWorkOrder;
 import com.athena.cases.features.dbm.entity.DbmWorkOrderAccountType;
 import com.athena.cases.features.dbm.entity.DbmWorkOrderCoverageLevel;
 import com.athena.cases.features.dbm.entity.DbmWorkOrderSpokenKey;
-import com.athena.cases.features.dbm.repository.DbmWorkOrderAccountTypeRepository;
-import com.athena.cases.features.dbm.repository.DbmWorkOrderCoverageLevelRepository;
 import com.athena.cases.features.dbm.repository.DbmWorkOrderRepository;
-import com.athena.cases.features.dbm.repository.DbmWorkOrderSpokenKeyRepository;
 import com.athena.cases.features.dbm.service.DbmWorkOrderService;
 import com.athena.cases.identity.entity.CaseTypeEntity;
 import com.athena.cases.identity.entity.TeamEntity;
 import com.athena.cases.identity.repository.CaseTypeRepository;
 import com.athena.cases.notification.NotificationService;
 import com.athena.cases.notification.NotifyTeamCommand;
+import com.athena.cases.security.CurrentUserService;
 import com.athena.cases.workflow.StartWorkflowCommand;
 import com.athena.cases.workflow.WorkflowService;
 
@@ -41,6 +41,8 @@ import com.athena.cases.workflow.WorkflowService;
 @Transactional
 public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
 
+    private static final Logger log = LoggerFactory.getLogger(DbmWorkOrderServiceImpl.class);
+
     private static final String CASE_NUMBER_PREFIX = "DBM";
     private static final int CASE_NUMBER_WIDTH = 6;
     private static final int MAX_CASE_NUMBER_SEQUENCE = 999_999;
@@ -48,52 +50,85 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
     private static final String TRANSFER_TYPE_CUSTOM = "Custom";
     private static final String TRANSFER_TYPE_CUSTOM_REQUIRES_APPROVAL = "Custom (Requires Approval)";
 
-    /**
-     * Temporary actor until {@code CurrentUserService} has a Spring bean implementation.
-     * TODO(auth): replace with CurrentUserService.requireDisplayName() / requireUserId().
-     */
-    private static final String TEMP_CASE_OWNER = "SYSTEM";
-
     private final CaseRepository caseRepository;
     private final CaseTypeRepository caseTypeRepository;
     private final DbmWorkOrderRepository dbmWorkOrderRepository;
-    private final DbmWorkOrderCoverageLevelRepository dbmWorkOrderCoverageLevelRepository;
-    private final DbmWorkOrderAccountTypeRepository dbmWorkOrderAccountTypeRepository;
-    private final DbmWorkOrderSpokenKeyRepository dbmWorkOrderSpokenKeyRepository;
     private final WorkflowService workflowService;
     private final NotificationService notificationService;
+    private final CurrentUserService currentUserService;
 
     public DbmWorkOrderServiceImpl(
             CaseRepository caseRepository,
             CaseTypeRepository caseTypeRepository,
             DbmWorkOrderRepository dbmWorkOrderRepository,
-            DbmWorkOrderCoverageLevelRepository dbmWorkOrderCoverageLevelRepository,
-            DbmWorkOrderAccountTypeRepository dbmWorkOrderAccountTypeRepository,
-            DbmWorkOrderSpokenKeyRepository dbmWorkOrderSpokenKeyRepository,
             WorkflowService workflowService,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            CurrentUserService currentUserService) {
         this.caseRepository = caseRepository;
         this.caseTypeRepository = caseTypeRepository;
         this.dbmWorkOrderRepository = dbmWorkOrderRepository;
-        this.dbmWorkOrderCoverageLevelRepository = dbmWorkOrderCoverageLevelRepository;
-        this.dbmWorkOrderAccountTypeRepository = dbmWorkOrderAccountTypeRepository;
-        this.dbmWorkOrderSpokenKeyRepository = dbmWorkOrderSpokenKeyRepository;
         this.workflowService = workflowService;
         this.notificationService = notificationService;
+        this.currentUserService = currentUserService;
     }
 
     @Override
     public DbmWorkOrderResponse create(CreateDbmWorkOrderRequest request) {
         Instant now = Instant.now();
-        String actor = TEMP_CASE_OWNER;
+        String actor = resolveActorDisplayName();
 
         CaseTypeEntity caseType = caseTypeRepository
                 .findByCode(CaseTypeCode.DBM_WORK_ORDER_REQUEST.name())
                 .orElseThrow(() -> new IllegalStateException(
                         "Case type not seeded: " + CaseTypeCode.DBM_WORK_ORDER_REQUEST.name()));
 
+        CaseEntity savedCase = persistNewCaseWithUniqueNumber(request, caseType, actor, now);
+
+        DbmWorkOrder dbmWorkOrder = new DbmWorkOrder();
+        dbmWorkOrder.setCaseEntity(savedCase);
+        mapRequestToDbmWorkOrder(request, dbmWorkOrder);
+        dbmWorkOrder.setCreatedAt(now);
+        dbmWorkOrder.setUpdatedAt(now);
+        dbmWorkOrder.setCreatedBy(actor);
+        dbmWorkOrder.setUpdatedBy(actor);
+
+        addCoverageLevels(dbmWorkOrder, request.coverageLevels(), now, actor);
+        addAccountTypes(dbmWorkOrder, request.requestedAccountTypes(), now, actor);
+        addSpokenKeys(dbmWorkOrder, request.spokenKeys(), now, actor);
+
+        DbmWorkOrder savedDbm = dbmWorkOrderRepository.saveAndFlush(dbmWorkOrder);
+
+        enqueueReceivingTeamWork(savedCase, caseType);
+
+        log.info(
+                "dbm work order created - caseId={} caseNumber={} owner={}",
+                savedCase.getId(),
+                savedCase.getCaseNumber(),
+                savedCase.getCaseOwner());
+
+        return toResponse(savedCase, savedDbm, caseType.getCode());
+    }
+
+    private String resolveActorDisplayName() {
+        String displayName = currentUserService.requireDisplayName();
+        if (displayName == null || displayName.isBlank()) {
+            return currentUserService.requirePrincipal().getUsername();
+        }
+        return displayName.trim();
+    }
+
+    /**
+     * Allocates the next DBM###### from MAX(existing) and flushes so the row is durable
+     * before DBM detail / workflow / notification inserts.
+     */
+    private CaseEntity persistNewCaseWithUniqueNumber(
+            CreateDbmWorkOrderRequest request,
+            CaseTypeEntity caseType,
+            String actor,
+            Instant now) {
+        String caseNumber = generateNextDbmCaseNumber();
         CaseEntity caseEntity = new CaseEntity();
-        caseEntity.setCaseNumber(generateNextDbmCaseNumber());
+        caseEntity.setCaseNumber(caseNumber);
         caseEntity.setCaseTypeId(caseType.getId());
         caseEntity.setSubject(request.subject());
         caseEntity.setDescription(request.description());
@@ -114,25 +149,7 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
         caseEntity.setUpdatedBy(actor);
         caseEntity.setVersion(1);
 
-        CaseEntity savedCase = caseRepository.save(caseEntity);
-
-        DbmWorkOrder dbmWorkOrder = new DbmWorkOrder();
-        dbmWorkOrder.setCaseEntity(savedCase);
-        mapRequestToDbmWorkOrder(request, dbmWorkOrder);
-        dbmWorkOrder.setCreatedAt(now);
-        dbmWorkOrder.setUpdatedAt(now);
-        dbmWorkOrder.setCreatedBy(actor);
-        dbmWorkOrder.setUpdatedBy(actor);
-
-        addCoverageLevels(dbmWorkOrder, request.coverageLevels(), now, actor);
-        addAccountTypes(dbmWorkOrder, request.requestedAccountTypes(), now, actor);
-        addSpokenKeys(dbmWorkOrder, request.spokenKeys(), now, actor);
-
-        DbmWorkOrder savedDbm = dbmWorkOrderRepository.save(dbmWorkOrder);
-
-        enqueueReceivingTeamWork(savedCase, caseType);
-
-        return toResponse(savedCase, savedDbm, caseType.getCode());
+        return caseRepository.saveAndFlush(caseEntity);
     }
 
     /**
@@ -162,7 +179,7 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
     @Override
     public DbmWorkOrderResponse update(Long caseId, UpdateDbmWorkOrderRequest request) {
         Instant now = Instant.now();
-        String actor = TEMP_CASE_OWNER;
+        String actor = resolveActorDisplayName();
 
         CaseEntity caseEntity = caseRepository.findById(caseId)
                 .orElseThrow(() -> new IllegalStateException("Case not found: " + caseId));
@@ -221,17 +238,29 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
     }
 
     /**
-     * Temporary unique Case Number generator.
-     * TODO(case-number): replace with a DB sequence / allocated counter for concurrency safety.
+     * Next DBM case number from MAX(existing) + 1. Zero-padded so lexical MAX matches numeric order.
      */
     private String generateNextDbmCaseNumber() {
-        for (int sequence = 1; sequence <= MAX_CASE_NUMBER_SEQUENCE; sequence++) {
-            String candidate = CASE_NUMBER_PREFIX + String.format("%0" + CASE_NUMBER_WIDTH + "d", sequence);
-            if (caseRepository.findByCaseNumber(candidate).isEmpty()) {
-                return candidate;
-            }
+        int nextSequence = caseRepository.findMaxDbmCaseNumber()
+                .map(DbmWorkOrderServiceImpl::parseDbmSequence)
+                .map(seq -> seq + 1)
+                .orElse(1);
+        if (nextSequence > MAX_CASE_NUMBER_SEQUENCE) {
+            throw new IllegalStateException("Exhausted DBM case number sequence space");
         }
-        throw new IllegalStateException("Exhausted DBM case number sequence space");
+        return CASE_NUMBER_PREFIX + String.format("%0" + CASE_NUMBER_WIDTH + "d", nextSequence);
+    }
+
+    private static int parseDbmSequence(String caseNumber) {
+        if (caseNumber == null || caseNumber.length() <= CASE_NUMBER_PREFIX.length()) {
+            return 0;
+        }
+        String suffix = caseNumber.substring(CASE_NUMBER_PREFIX.length());
+        try {
+            return Integer.parseInt(suffix);
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
     }
 
     private static boolean isCustomTransferType(String transferType) {

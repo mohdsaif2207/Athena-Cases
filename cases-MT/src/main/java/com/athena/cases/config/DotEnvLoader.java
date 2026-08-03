@@ -60,12 +60,23 @@ public final class DotEnvLoader {
     /**
      * Converts {@code SPRING_FOO_BAR} to {@code spring.foo.bar} for system-property binding.
      * Returns null when the key is not a SPRING_* setting.
+     * <p>
+     * Special-case: {@code HIBERNATE_DEFAULT_SCHEMA} must remain {@code hibernate.default_schema}
+     * (underscore), not {@code hibernate.default.schema}.
      */
     static String toSpringPropertyKey(String envKey) {
         if (envKey == null || !envKey.startsWith("SPRING_") || envKey.length() <= "SPRING_".length()) {
             return null;
         }
-        return "spring." + envKey.substring("SPRING_".length()).toLowerCase().replace('_', '.');
+        String remainder = envKey.substring("SPRING_".length());
+        if (remainder.endsWith("HIBERNATE_DEFAULT_SCHEMA")) {
+            String prefix = remainder.substring(0, remainder.length() - "HIBERNATE_DEFAULT_SCHEMA".length());
+            String dottedPrefix = prefix.isEmpty()
+                    ? ""
+                    : prefix.toLowerCase().replace('_', '.');
+            return "spring." + dottedPrefix + "hibernate.default_schema";
+        }
+        return "spring." + remainder.toLowerCase().replace('_', '.');
     }
 
     private static Path resolveEnvFile() {

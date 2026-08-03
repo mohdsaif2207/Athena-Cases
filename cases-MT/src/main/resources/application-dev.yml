@@ -1,4 +1,5 @@
 # Local development — defaults to H2; point DB_URL + DB_DRIVER at Postgres when available.
+# DB_SCHEMA must match currentSchema in DB_URL so Flyway and JPA use the same schema.
 spring:
   datasource:
     url: ${DB_URL:jdbc:h2:file:./data/cases-mt;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE}
@@ -14,10 +15,10 @@ spring:
     show-sql: false
     properties:
       hibernate:
-        default_schema: cases_mt
+        default_schema: ${DB_SCHEMA:cases_mt}
   flyway:
-    schemas: cases_mt
-    default-schema: cases_mt
+    schemas: ${DB_SCHEMA:cases_mt}
+    default-schema: ${DB_SCHEMA:cases_mt}
     create-schemas: true
 
 app:
