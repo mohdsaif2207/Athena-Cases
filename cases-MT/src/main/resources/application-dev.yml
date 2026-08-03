@@ -1,16 +1,18 @@
-# Local development — H2 (PostgreSQL mode). Override with real Postgres when available.
+# Local development — PostgreSQL.
+# URL / username / password: application.properties (do not set H2 defaults here).
 spring:
   datasource:
-    url: ${DB_URL:jdbc:h2:file:./data/cases-mt;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE}
-    username: ${DB_USER:sa}
-    password: ${DB_PASSWORD:}
-    driver-class-name: org.h2.Driver
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    driver-class-name: org.postgresql.Driver
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: false
+    properties:
+      hibernate:
+        default_schema: cases_mt
+  flyway:
+    schemas: cases_mt
+    default-schema: cases_mt
+    create-schemas: true
 
 app:
   cors:

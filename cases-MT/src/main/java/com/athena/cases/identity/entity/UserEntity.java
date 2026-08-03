@@ -31,7 +31,7 @@ public class UserEntity extends AuditableEntity {
     private String status;
 
     /** Direct role assignments (kept for Admin flexibility + SYSTEM_ADMIN seed). */
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
@@ -40,7 +40,7 @@ public class UserEntity extends AuditableEntity {
     private Set<RoleEntity> roles = new HashSet<>();
 
     /** Primary RBAC path: User → Groups → Roles → Permissions. */
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_groups",
             joinColumns = @JoinColumn(name = "user_id"),
@@ -49,7 +49,7 @@ public class UserEntity extends AuditableEntity {
     private Set<GroupEntity> groups = new HashSet<>();
 
     /** Team membership assignments. */
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_teams",
             joinColumns = @JoinColumn(name = "user_id"),

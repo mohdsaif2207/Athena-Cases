@@ -1,16 +1,19 @@
 package com.athena.cases.common.entity;
 
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.MappedSuperclass;
 import java.util.Objects;
 
 /**
  * Shared surrogate-key base for domain entities.
- *
- * <p>JPA {@code @MappedSuperclass} / {@code @Id} annotations are added in foundation Phase 1
- * when {@code spring-boot-starter-data-jpa} is on the classpath. This class establishes the
- * identity contract features will inherit.
  */
+@MappedSuperclass
 public abstract class BaseEntity {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     public Long getId() {

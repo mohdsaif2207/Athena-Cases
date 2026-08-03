@@ -27,7 +27,7 @@ public class RoleEntity extends AuditableEntity {
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "role_permissions",
             joinColumns = @JoinColumn(name = "role_id"),
@@ -35,7 +35,7 @@ public class RoleEntity extends AuditableEntity {
     )
     private Set<PermissionEntity> permissions = new HashSet<>();
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "role_case_types",
             joinColumns = @JoinColumn(name = "role_id"),
@@ -43,7 +43,7 @@ public class RoleEntity extends AuditableEntity {
     )
     private Set<CaseTypeEntity> caseTypes = new HashSet<>();
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "role_initiating_teams",
             joinColumns = @JoinColumn(name = "role_id"),
@@ -51,7 +51,7 @@ public class RoleEntity extends AuditableEntity {
     )
     private Set<TeamEntity> initiatingTeams = new HashSet<>();
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "role_receiving_teams",
             joinColumns = @JoinColumn(name = "role_id"),
