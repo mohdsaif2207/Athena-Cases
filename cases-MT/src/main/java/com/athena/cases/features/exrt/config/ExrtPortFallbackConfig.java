@@ -1,6 +1,7 @@
 package com.athena.cases.features.exrt.config;
 
 import com.athena.cases.common.constants.PermissionCodes;
+import com.athena.cases.lookup.EventIdLookupItem;
 import com.athena.cases.lookup.LookupItem;
 import com.athena.cases.lookup.LookupService;
 import com.athena.cases.notification.NotificationQueueItem;
@@ -78,6 +79,7 @@ public class ExrtPortFallbackConfig {
                 WorkflowRef created = new WorkflowRef(
                         seq.getAndIncrement(),
                         command.caseId(),
+                        command.workflowType(),
                         command.receiverTeamCode(),
                         command.initialStatusCode()
                 );
@@ -167,6 +169,21 @@ public class ExrtPortFallbackConfig {
                 return List.of(
                         new LookupItem("1", "EXRT_REQUEST", "Executive Response Team (ExRT) Request")
                 );
+            }
+
+            @Override
+            public List<LookupItem> listActiveClients() {
+                return searchClients("");
+            }
+
+            @Override
+            public List<EventIdLookupItem> listActiveEventIds() {
+                return List.of();
+            }
+
+            @Override
+            public List<LookupItem> listActiveSpokenKeys() {
+                return List.of();
             }
         };
     }

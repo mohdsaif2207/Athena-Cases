@@ -114,6 +114,7 @@ public class ExrtCaseServiceImpl implements ExrtCaseService {
 
         WorkflowRef workflowRef = workflowService.start(new StartWorkflowCommand(
                 platformCaseId,
+                ExrtConstants.WORKFLOW_TYPE_EXRT,
                 ExrtConstants.RECEIVER_TEAM_DBM,
                 ExrtConstants.WORKFLOW_STATUS_PENDING_ASSIGNMENT
         ));

@@ -96,7 +96,12 @@ class ExrtCaseServiceTest {
             return entity;
         });
         when(workflowService.start(any())).thenReturn(
-                new WorkflowRef(9L, 100L, ExrtConstants.RECEIVER_TEAM_DBM, "PENDING_ASSIGNMENT"));
+                new WorkflowRef(
+                        9L,
+                        100L,
+                        ExrtConstants.WORKFLOW_TYPE_EXRT,
+                        ExrtConstants.RECEIVER_TEAM_DBM,
+                        "PENDING_ASSIGNMENT"));
 
         var response = service.create(sampleRequest());
 
