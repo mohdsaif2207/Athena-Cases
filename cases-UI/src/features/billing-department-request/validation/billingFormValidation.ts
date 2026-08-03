@@ -5,7 +5,9 @@ import {
   STATUS_OPTIONS,
 } from '@/features/billing-department-request/constants/billingEnums'
 
-export type BillingFieldErrors = Partial<Record<keyof BillingFormValues, string>>
+export type BillingFieldErrors = Partial<
+  Record<keyof BillingFormValues | 'caseOwner', string>
+>
 
 const PRIORITY_RE = /^(High|Medium|Low)$/
 const STATUS_RE = /^(Requested|In Progress|Killed|On Hold|Incomplete|Completed)$/
@@ -13,31 +15,47 @@ const INT_RE = /^-?\d+$/
 /** Mirrors @Digits(integer=16, fraction=2) — optional sign, up to 16 integer digits, up to 2 fraction. */
 const DECIMAL_RE = /^-?\d{1,16}(\.\d{1,2})?$/
 
+export interface ValidateBillingFormOptions {
+  /** Logged-in username shown as Case Owner (User Story mandatory). */
+  caseOwner?: string
+}
+
 /**
- * Client-side checks that mirror BillingDepartmentRequestCreate/UpdateRequest Bean Validation.
- * Server remains source of truth.
+ * Client-side checks that mirror BillingDepartmentRequestCreate/UpdateRequest Bean Validation
+ * plus User Story mandatory fields (Case Owner, Priority, Status, Request Description).
  */
 export function validateBillingForm(
   values: BillingFormValues,
   mode: 'create' | 'edit',
+  options: ValidateBillingFormOptions = {},
 ): BillingFieldErrors {
   const errors: BillingFieldErrors = {}
 
+  if (!options.caseOwner?.trim()) {
+    errors.caseOwner = 'Case Owner is required'
+  }
+
   if (!values.priority?.trim()) {
-    errors.priority = 'priority must be High, Medium, or Low'
-  } else if (!PRIORITY_RE.test(values.priority) || !(PRIORITY_OPTIONS as readonly string[]).includes(values.priority)) {
+    errors.priority = 'Priority is required'
+  } else if (
+    !PRIORITY_RE.test(values.priority) ||
+    !(PRIORITY_OPTIONS as readonly string[]).includes(values.priority)
+  ) {
     errors.priority = 'priority must be High, Medium, or Low'
   }
 
   if (!values.status?.trim()) {
-    errors.status = 'status must be a defined case status value'
-  } else if (!STATUS_RE.test(values.status) || !(STATUS_OPTIONS as readonly string[]).includes(values.status)) {
+    errors.status = 'Status is required'
+  } else if (
+    !STATUS_RE.test(values.status) ||
+    !(STATUS_OPTIONS as readonly string[]).includes(values.status)
+  ) {
     errors.status = 'status must be a defined case status value'
   }
 
   const description = values.requestDescription.trim()
   if (!description) {
-    errors.requestDescription = 'must not be blank'
+    errors.requestDescription = 'Request Description is required'
   } else if (description.length > 5000) {
     errors.requestDescription = 'size must be between 0 and 5000'
   }
@@ -75,7 +93,8 @@ export function validateBillingForm(
 
   if (values.approxRevenueImpact.trim()) {
     if (!DECIMAL_RE.test(values.approxRevenueImpact.trim())) {
-      errors.approxRevenueImpact = 'numeric value out of bounds (<16 digits>.<2 digits> expected)'
+      errors.approxRevenueImpact =
+        'numeric value out of bounds (<16 digits>.<2 digits> expected)'
     }
   }
 

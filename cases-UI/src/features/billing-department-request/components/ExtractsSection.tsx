@@ -1,4 +1,5 @@
-import { DatePickerField } from '@/features/cases/components/DatePickerField'
+import { BillingDateField } from '@/features/billing-department-request/components/BillingDateField'
+import { BillingFieldError } from '@/features/billing-department-request/components/BillingFieldError'
 import { BillingFieldLabel } from '@/features/billing-department-request/components/BillingFieldLabel'
 import {
   BILLING_EXTRACT_TYPE_OPTIONS,
@@ -13,15 +14,6 @@ interface ExtractsSectionProps {
   readOnly: boolean
   errors: BillingFieldErrors
   onChange: <K extends keyof BillingFormValues>(key: K, value: BillingFormValues[K]) => void
-}
-
-function FieldError({ message, testId }: { message?: string; testId: string }) {
-  if (!message) return null
-  return (
-    <p className="billing-field__error" role="alert" data-testid={testId}>
-      {message}
-    </p>
-  )
 }
 
 export function ExtractsSection({ values, readOnly, errors, onChange }: ExtractsSectionProps) {
@@ -79,12 +71,12 @@ export function ExtractsSection({ values, readOnly, errors, onChange }: Extracts
               data-testid="billing-institution"
               aria-invalid={Boolean(errors.billingInstitution)}
             />
-            <FieldError message={errors.billingInstitution} testId="billing-institution-error" />
+            <BillingFieldError message={errors.billingInstitution} testId="billing-institution-error" />
           </label>
 
           <div className="billing-field">
             <BillingFieldLabel>Target Post Date</BillingFieldLabel>
-            <DatePickerField
+            <BillingDateField
               value={values.targetPostDate}
               onChange={(v) => onChange('targetPostDate', v)}
               disabled={readOnly}
@@ -105,7 +97,7 @@ export function ExtractsSection({ values, readOnly, errors, onChange }: Extracts
               data-testid="billing-bill-set"
               aria-invalid={Boolean(errors.billSet)}
             />
-            <FieldError message={errors.billSet} testId="billing-bill-set-error" />
+            <BillingFieldError message={errors.billSet} testId="billing-bill-set-error" />
           </label>
 
           <label className="billing-field">
@@ -119,7 +111,7 @@ export function ExtractsSection({ values, readOnly, errors, onChange }: Extracts
               data-testid="billing-cycle"
               aria-invalid={Boolean(errors.billingCycle)}
             />
-            <FieldError message={errors.billingCycle} testId="billing-cycle-error" />
+            <BillingFieldError message={errors.billingCycle} testId="billing-cycle-error" />
           </label>
 
           <label className="billing-field">
@@ -152,7 +144,7 @@ export function ExtractsSection({ values, readOnly, errors, onChange }: Extracts
               data-testid="billing-hard-decline-codes"
               aria-invalid={Boolean(errors.hardDeclineCodes)}
             />
-            <FieldError message={errors.hardDeclineCodes} testId="billing-hard-decline-codes-error" />
+            <BillingFieldError message={errors.hardDeclineCodes} testId="billing-hard-decline-codes-error" />
           </label>
         </div>
       </div>

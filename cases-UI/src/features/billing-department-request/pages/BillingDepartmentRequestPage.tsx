@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
   BillingRequestForm,
   type BillingPageMode,
@@ -8,7 +8,7 @@ import '@/features/billing-department-request/components/BillingRequestForm.css'
 
 /**
  * Billing Department Request page — Create / View / Edit via query params.
- * Visual layout aligned to teammate Create Case screenshots (navy section cards).
+ * Page title matches User Story: full-width navy bar, no Back to Cases.
  */
 export function BillingDepartmentRequestPage() {
   const [params] = useSearchParams()
@@ -21,21 +21,11 @@ export function BillingDepartmentRequestPage() {
   else if (caseId != null && modeParam === 'edit') mode = 'edit'
   else if (caseId != null) mode = 'view'
 
-  const title =
-    mode === 'view'
-      ? 'View Billing Department Request'
-      : mode === 'edit'
-        ? 'Edit Billing Department Request'
-        : 'Create Billing Department Request'
-
   return (
     <div className="billing-page" data-testid="billing-case-create-page">
       <div className="billing-page__inner">
-        <header className="billing-page__header">
-          <h1 className="billing-page__title">{title}</h1>
-          <Link to="/cases" className="billing-page__back" data-testid="billing-back-to-cases">
-            Back to Cases
-          </Link>
+        <header className="billing-page__title-bar" data-testid="billing-page-header">
+          <h1 className="billing-page__title">Billing Department Request</h1>
         </header>
 
         <BillingRequestForm mode={mode} caseId={mode === 'create' ? null : caseId} />

@@ -7,8 +7,24 @@ interface HoldLevelDualListboxProps {
   onChange: (next: string[]) => void
 }
 
+const ALL_HOLD_LEVEL = 'All'
+
+function uniquePreserveOrder(values: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const v of values) {
+    if (!v || seen.has(v)) continue
+    seen.add(v)
+    out.push(v)
+  }
+  return out
+}
+
 /**
- * Dual listbox styled to match Create Case multi-select / transfer patterns.
+ * Hold Level dual listbox.
+ * - Individual moves: only highlighted values.
+ * - Selecting "All": moves every Hold Level into Selected; Available becomes empty.
+ * - Removing "All": clears Selected and restores the full Available list.
  */
 export function HoldLevelDualListbox({
   availableOptions,
@@ -18,16 +34,38 @@ export function HoldLevelDualListbox({
 }: HoldLevelDualListboxProps) {
   const availableRef = useRef<HTMLSelectElement>(null)
   const selectedRef = useRef<HTMLSelectElement>(null)
-  const available = availableOptions.filter((code) => !selected.includes(code))
+
+  const masterOptions = uniquePreserveOrder(availableOptions)
+  const selectedUnique = uniquePreserveOrder(selected)
+  const availableUnique = masterOptions.filter((code) => !selectedUnique.includes(code))
 
   function moveToSelected(codes: string[]) {
-    if (readOnly) return
-    onChange([...selected, ...codes.filter((c) => !selected.includes(c))])
+    if (readOnly || !codes.length) return
+
+    if (codes.includes(ALL_HOLD_LEVEL)) {
+      // Selecting All selects every Hold Level (including All).
+      onChange([...masterOptions])
+      return
+    }
+
+    onChange(uniquePreserveOrder([...selectedUnique, ...codes]))
   }
 
   function moveToAvailable(codes: string[]) {
-    if (readOnly) return
-    onChange(selected.filter((c) => !codes.includes(c)))
+    if (readOnly || !codes.length) return
+
+    if (codes.includes(ALL_HOLD_LEVEL)) {
+      // Removing All clears Selected so Available is fully restored.
+      onChange([])
+      return
+    }
+
+    let next = selectedUnique.filter((c) => !codes.includes(c))
+    // Individual removals invalidate an "All" selection.
+    if (next.includes(ALL_HOLD_LEVEL)) {
+      next = next.filter((c) => c !== ALL_HOLD_LEVEL)
+    }
+    onChange(next)
   }
 
   return (
@@ -43,17 +81,16 @@ export function HoldLevelDualListbox({
           data-testid="billing-hold-level-available"
           aria-label="Available hold levels"
           onDoubleClick={(e) => {
-            const value = (e.target as HTMLSelectElement).value
-            if (value) moveToSelected([value])
+            const option = e.target as HTMLOptionElement
+            if (option?.value) moveToSelected([option.value])
           }}
         >
-          {available.map((code) => (
+          {availableUnique.map((code) => (
             <option key={code} value={code}>
               {code}
             </option>
           ))}
         </select>
-        <p className="billing-dual-listbox__hint">Hold Ctrl/Cmd to select multiple</p>
       </label>
 
       <div className="billing-dual-listbox__actions" aria-label="Move hold levels">
@@ -94,11 +131,11 @@ export function HoldLevelDualListbox({
           data-testid="billing-hold-level-selected"
           aria-label="Selected hold levels"
           onDoubleClick={(e) => {
-            const value = (e.target as HTMLSelectElement).value
-            if (value) moveToAvailable([value])
+            const option = e.target as HTMLOptionElement
+            if (option?.value) moveToAvailable([option.value])
           }}
         >
-          {selected.map((code) => (
+          {selectedUnique.map((code) => (
             <option key={code} value={code}>
               {code}
             </option>

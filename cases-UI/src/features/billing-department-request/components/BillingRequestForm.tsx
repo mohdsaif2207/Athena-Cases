@@ -1,7 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { fetchActiveClients } from '@/features/billing-department-request/api/billingLookupApi'
+import {
+  fetchActiveClients,
+  fetchCampaigns,
+  fetchParentCases,
+  fetchProducts,
+  fetchSegmentsForClient,
+} from '@/features/billing-department-request/api/billingLookupApi'
 import {
   createBillingDepartmentRequest,
   fetchBillingAssignees,
@@ -14,6 +20,7 @@ import { ExtractsSection } from '@/features/billing-department-request/component
 import { FormActionsBar } from '@/features/billing-department-request/components/FormActionsBar'
 import { GeneralSection } from '@/features/billing-department-request/components/GeneralSection'
 import { HoldsSection } from '@/features/billing-department-request/components/HoldsSection'
+import { BILLING_HOLD_LEVEL_OPTIONS } from '@/features/billing-department-request/constants/billingEnums'
 import type { BillingAssigneeDto, LookupItemDto } from '@/features/billing-department-request/types/billingTypes'
 import {
   getBillingErrorMessage,
@@ -30,13 +37,23 @@ import {
   validateBillingForm,
   type BillingFieldErrors,
 } from '@/features/billing-department-request/validation/billingFormValidation'
-import { BILLING_HOLD_LEVEL_OPTIONS } from '@/features/billing-department-request/constants/billingEnums'
 
 export type BillingPageMode = 'create' | 'view' | 'edit'
 
 interface BillingRequestFormProps {
   mode: BillingPageMode
   caseId: number | null
+}
+
+function dedupeHoldLevels(levels: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const level of levels) {
+    if (!level || seen.has(level)) continue
+    seen.add(level)
+    out.push(level)
+  }
+  return out
 }
 
 export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
@@ -47,19 +64,27 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
   const [values, setValues] = useState<BillingFormValues>(createDefaultBillingFormValues)
   const [errors, setErrors] = useState<BillingFieldErrors>({})
   const [clients, setClients] = useState<LookupItemDto[]>([])
+  const [campaigns, setCampaigns] = useState<LookupItemDto[]>([])
+  const [products, setProducts] = useState<LookupItemDto[]>([])
+  const [parentCases, setParentCases] = useState<LookupItemDto[]>([])
+  const [segments, setSegments] = useState<LookupItemDto[]>([])
   const [assignees, setAssignees] = useState<BillingAssigneeDto[]>([])
-  const [holdLevelOptions, setHoldLevelOptions] = useState<string[]>([...BILLING_HOLD_LEVEL_OPTIONS])
+  const [holdLevelOptions, setHoldLevelOptions] = useState<string[]>([
+    ...BILLING_HOLD_LEVEL_OPTIONS,
+  ])
   const [loading, setLoading] = useState(mode !== 'create')
   const [lookupsLoading, setLookupsLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [toastTone, setToastTone] = useState<'info' | 'error'>('info')
   const [confirm, setConfirm] = useState<'cancel' | 'reset' | null>(null)
 
   const readOnly = mode === 'view'
   const validationMode = mode === 'edit' ? 'edit' : 'create'
 
-  const showToast = useCallback((message: string) => {
+  const showToast = useCallback((message: string, tone: 'info' | 'error' = 'info') => {
+    setToastTone(tone)
     setToast(message)
     window.setTimeout(() => setToast(null), 3200)
   }, [])
@@ -69,15 +94,25 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
     ;(async () => {
       setLookupsLoading(true)
       try {
-        const [clientRows, assigneeRows, holdLevels] = await Promise.all([
-          fetchActiveClients(),
-          fetchBillingAssignees().catch(() => [] as BillingAssigneeDto[]),
-          fetchBillingHoldLevels().catch(() => [] as string[]),
-        ])
+        const [clientRows, campaignRows, productRows, parentRows, assigneeRows, holdLevels] =
+          await Promise.all([
+            fetchActiveClients(),
+            fetchCampaigns(),
+            fetchProducts(),
+            fetchParentCases(),
+            fetchBillingAssignees().catch(() => [] as BillingAssigneeDto[]),
+            fetchBillingHoldLevels().catch(() => [] as string[]),
+          ])
         if (cancelled) return
         setClients(clientRows)
+        setCampaigns(campaignRows)
+        setProducts(productRows)
+        setParentCases(parentRows)
         setAssignees(assigneeRows)
-        if (holdLevels.length) setHoldLevelOptions(holdLevels)
+        const levels = dedupeHoldLevels(
+          holdLevels.length ? holdLevels : [...BILLING_HOLD_LEVEL_OPTIONS],
+        )
+        setHoldLevelOptions(levels)
       } finally {
         if (!cancelled) setLookupsLoading(false)
       }
@@ -86,6 +121,17 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const rows = await fetchSegmentsForClient(values.clientId)
+      if (!cancelled) setSegments(rows)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [values.clientId])
 
   useEffect(() => {
     if (mode === 'create' || caseId == null) {
@@ -126,11 +172,23 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
     })
   }
 
+  function onClientChange(clientId: string) {
+    setValues((prev) => ({ ...prev, clientId, segmentId: '' }))
+    setErrors((prev) => {
+      const next = { ...prev }
+      delete next.clientId
+      delete next.segmentId
+      return next
+    })
+  }
+
   async function handleSave() {
-    const clientErrors = validateBillingForm(values, validationMode)
+    const clientErrors = validateBillingForm(values, validationMode, {
+      caseOwner: caseOwnerUsername,
+    })
     if (Object.keys(clientErrors).length) {
       setErrors(clientErrors)
-      showToast('Please correct the highlighted fields.')
+      showToast('Please correct the highlighted fields.', 'error')
       return
     }
 
@@ -152,7 +210,7 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
     } catch (err) {
       const fieldErrors = mapApiErrorsToFields(err)
       if (Object.keys(fieldErrors).length) setErrors(fieldErrors)
-      showToast(getBillingErrorMessage(err))
+      showToast(getBillingErrorMessage(err), 'error')
     } finally {
       setSaving(false)
     }
@@ -184,8 +242,14 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
       }
       setValues(defaults)
       setErrors({})
+      setSegments([])
     }
   }
+
+  const holdLevelsForUi = useMemo(
+    () => dedupeHoldLevels(holdLevelOptions.length ? holdLevelOptions : [...BILLING_HOLD_LEVEL_OPTIONS]),
+    [holdLevelOptions],
+  )
 
   if (loading || lookupsLoading) {
     return (
@@ -215,15 +279,20 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
         readOnly={readOnly}
         errors={errors}
         clients={clients}
+        campaigns={campaigns}
         assignees={assignees}
+        parentCases={parentCases}
         onChange={onChange}
+        onClientChange={onClientChange}
       />
       <ExtractsSection values={values} readOnly={readOnly} errors={errors} onChange={onChange} />
       <HoldsSection
         values={values}
         readOnly={readOnly}
         errors={errors}
-        holdLevelOptions={holdLevelOptions}
+        holdLevelOptions={holdLevelsForUi}
+        segments={segments}
+        products={products}
         onChange={onChange}
       />
       <FormActionsBar
@@ -251,7 +320,11 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
       />
 
       {toast ? (
-        <div className="cases-toast" role="status" data-testid="billing-toast">
+        <div
+          className={`billing-toast ${toastTone === 'error' ? 'billing-toast--error' : ''}`}
+          role="status"
+          data-testid="billing-toast"
+        >
           {toast}
         </div>
       ) : null}

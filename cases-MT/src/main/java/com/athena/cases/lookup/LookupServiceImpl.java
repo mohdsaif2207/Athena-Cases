@@ -30,27 +30,27 @@ public class LookupServiceImpl implements LookupService {
 
     @Override
     public List<LookupItem> searchClients(String query) {
-        return List.of();
+        return LookupMockData.filterByQuery(LookupMockData.CLIENTS, query);
     }
 
     @Override
     public List<LookupItem> listActiveCampaigns() {
-        return List.of();
+        return LookupMockData.CAMPAIGNS;
     }
 
     @Override
     public List<LookupItem> listSegments(String clientId) {
-        return List.of();
+        return LookupMockData.segmentsForClient(clientId);
     }
 
     @Override
     public List<LookupItem> listProducts(String query) {
-        return List.of();
+        return LookupMockData.filterByQuery(LookupMockData.PRODUCTS, query);
     }
 
     @Override
     public List<LookupItem> findParentCases(String query) {
-        return List.of();
+        return LookupMockData.filterByQuery(LookupMockData.PARENT_CASES, query);
     }
 
     @Override
