@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    # Full JDBC URL required. From Athena-Cases/.env (local) or Docker Compose env.
+    url: ${DB_URL:?Set DB_URL in Athena-Cases/.env}
+    username: ${DB_USER:?Set DB_USER in Athena-Cases/.env}
+    password: ${DB_PASSWORD:?Set DB_PASSWORD in Athena-Cases/.env}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect

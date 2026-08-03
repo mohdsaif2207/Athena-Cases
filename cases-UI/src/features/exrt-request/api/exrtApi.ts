@@ -2,21 +2,13 @@ import axios from 'axios'
 import type { ApiEnvelope, ExrtCaseCreatePayload, ExrtCaseCreateResult, LookupItem } from '../types/exrt.types'
 import { EXRT_API_BASE, EXRT_LOOKUP_BASE } from '../theme/exrtTheme'
 
-/**
- * Vite only exposes VITE_* vars. Prefer VITE_API_BASE_URL (canonical);
- * accept VITE_API_URL as an alias used in some local .env files.
- * Default matches cases-MT local port (8081), not docker-compose internal 8090.
- */
-function resolveApiBaseUrl(): string {
-  const fromEnv =
-    import.meta.env.VITE_API_BASE_URL ||
-    import.meta.env.VITE_API_URL ||
-    ''
-  const trimmed = String(fromEnv).trim()
-  if (trimmed) {
-    return trimmed.replace(/\/$/, '')
+/** Single source of truth: VITE_API_BASE_URL (see cases-UI/.env). Local default: :8090. */
+export function resolveApiBaseUrl(): string {
+  const fromEnv = String(import.meta.env.VITE_API_BASE_URL ?? '').trim()
+  if (fromEnv) {
+    return fromEnv.replace(/\/$/, '')
   }
-  return 'http://localhost:8081'
+  return 'http://localhost:8090'
 }
 
 const api = axios.create({
@@ -26,7 +18,7 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  // Auth header only — does not rewrite URL/path
+  // Auth header only — does not rewrite baseURL or path
   const token = localStorage.getItem('accessToken')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
