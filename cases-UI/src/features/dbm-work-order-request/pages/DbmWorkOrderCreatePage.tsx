@@ -1,7 +1,21 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
+import type { EventIdLookupItem } from '../api/lookups'
+import { useCreateDbmWorkOrder, toUserFriendlyError } from '../hooks/useCreateDbmWorkOrder'
+import { useDbmLookups } from '../hooks/useDbmLookups'
+import { toCreateDbmWorkOrderRequest } from '../mappers/toCreateRequest'
+import {
+  DEFAULT_DBM_CREATE_FORM,
+  type DbmCreateFormState,
+  type DbmMandatoryField,
+} from '../types/form'
+import {
+  hasDbmCreateFieldErrors,
+  validateDbmCreateForm,
+  type DbmCreateFieldErrors,
+} from '../validation/createValidation'
 import './DbmWorkOrderCreatePage.css'
 
-/** Values enumerated in the DBM User Story / LLD. */
+/** Values enumerated in the DBM User Story / LLD (not served by lookup APIs). */
 const VENDOR_OPTIONS = ['Acxiom', 'Other'] as const
 const PRIORITY_OPTIONS = ['High', 'Medium', 'Low'] as const
 const STATUS_OPTIONS = [
@@ -27,7 +41,7 @@ const YES_NO_OPTIONS = ['Yes', 'No'] as const
 const FREQUENCY_OPTIONS = ['Once'] as const
 
 /**
- * Mock option lists for multi-selects / mock lookups (story allows mock data).
+ * Static option lists for fields not covered by GET /api/lookups/*.
  * Labels are presentation values only — not additional form fields.
  */
 const COVERAGE_LEVEL_OPTIONS = ['Platinum', 'Gold', 'Silver', 'Bronze'] as const
@@ -38,85 +52,6 @@ const ACCOUNT_TYPE_OPTIONS = [
   'Loan',
   'Mortgage',
 ] as const
-const CLIENT_OPTIONS = [
-  { code: 'CLIENT001', label: 'ABC Bank' },
-  { code: 'CLIENT002', label: 'XYZ Finance' },
-  { code: 'CLIENT003', label: 'First National Credit Union' },
-] as const
-const SPOKEN_KEY_OPTIONS = [
-  { code: 'SPK001', label: 'English' },
-  { code: 'SPK002', label: 'Spanish' },
-  { code: 'SPK003', label: 'French' },
-] as const
-const EVENT_ID_OPTIONS = [
-  { code: 'EVT1001', label: 'Summer Campaign' },
-  { code: 'EVT1002', label: 'Winter Campaign' },
-  { code: 'EVT1003', label: 'Fall Acquisition' },
-] as const
-
-type FormState = {
-  vendor: string
-  caseOwner: string
-  requestedDueDate: string
-  priority: string
-  subject: string
-  status: string
-  description: string
-  coreProcessorConversion: boolean
-  transferType: string
-  coverageLevels: string[]
-  returnFileExpected: string
-  pgpKeyAtAcxiom: string
-  requestedAccountTypes: string[]
-  expectedQuantity: string
-  frequency: string
-  specialInstructions: string
-  clientId: string
-  spokenKeys: string[]
-  eventId: string
-  mediaIds: string
-  mailMonth: string
-  mediaOutQuantity: string
-  changesToMatchbackDb: boolean
-  selectionCriteria: string
-  field: string
-  changeTo: string
-  dbmWorkOrderNumber: string
-  dbmCompletionNotes: string
-  totalRecordsUpdated: string
-}
-
-const DEFAULT_FORM: FormState = {
-  vendor: '',
-  caseOwner: 'Logged-in user',
-  requestedDueDate: '',
-  priority: 'Medium',
-  subject: '',
-  status: 'Requested',
-  description: '',
-  coreProcessorConversion: false,
-  transferType: '',
-  coverageLevels: [],
-  returnFileExpected: '',
-  pgpKeyAtAcxiom: '',
-  requestedAccountTypes: [],
-  expectedQuantity: '',
-  frequency: 'Once',
-  specialInstructions: '',
-  clientId: '',
-  spokenKeys: [],
-  eventId: '',
-  mediaIds: '',
-  mailMonth: '',
-  mediaOutQuantity: '',
-  changesToMatchbackDb: false,
-  selectionCriteria: '',
-  field: '',
-  changeTo: '',
-  dbmWorkOrderNumber: '',
-  dbmCompletionNotes: '',
-  totalRecordsUpdated: '',
-}
 
 function toggleMultiValue(current: string[], value: string): string[] {
   return current.includes(value)
@@ -125,29 +60,172 @@ function toggleMultiValue(current: string[], value: string): string[] {
 }
 
 /**
- * Visual-only DBM Work Order Request Create screen (Athena styling).
- * Field set / labels / defaults follow the DBM User Story & LLD only.
+ * DBM Work Order Request Create screen (Athena styling).
+ * Lookups + mandatory create validation + POST /api/dbm/work-orders.
  */
 export function DbmWorkOrderCreatePage() {
-  const [form, setForm] = useState<FormState>(DEFAULT_FORM)
+  const [form, setForm] = useState<DbmCreateFormState>(DEFAULT_DBM_CREATE_FORM)
+  const [fieldErrors, setFieldErrors] = useState<DbmCreateFieldErrors>({})
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+  const {
+    data: lookups,
+    isLoading: lookupsLoading,
+    isError: lookupsFailed,
+    error: lookupsError,
+    refetch: refetchLookups,
+  } = useDbmLookups()
+
+  const createMutation = useCreateDbmWorkOrder()
+  const isSaving = createMutation.isPending
+
+  const clients = lookups?.clients ?? []
+  const eventIds = lookups?.eventIds ?? []
+  const spokenKeys = lookups?.spokenKeys ?? []
+  const lookupsReady = !lookupsLoading && !lookupsFailed
+
+  const clearFieldError = (key: DbmMandatoryField) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) {
+        return prev
+      }
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
+  const setField = <K extends keyof DbmCreateFormState>(
+    key: K,
+    value: DbmCreateFormState[K],
+  ) => {
     setForm((prev) => ({ ...prev, [key]: value }))
+    setSuccessMessage(null)
+    setSaveError(null)
+    if (
+      key === 'vendor' ||
+      key === 'requestedDueDate' ||
+      key === 'priority' ||
+      key === 'subject' ||
+      key === 'status' ||
+      key === 'transferType' ||
+      key === 'returnFileExpected' ||
+      key === 'clientId'
+    ) {
+      clearFieldError(key)
+    }
+  }
+
+  const handleEventIdChange = (code: string) => {
+    const selected: EventIdLookupItem | undefined = eventIds.find(
+      (item) => item.code === code,
+    )
+    setForm((prev) => ({
+      ...prev,
+      eventId: code,
+      mailMonth: selected?.mailMonth ?? '',
+    }))
+    setSuccessMessage(null)
+    setSaveError(null)
   }
 
   const handleReset = () => {
-    setForm(DEFAULT_FORM)
+    setForm(DEFAULT_DBM_CREATE_FORM)
+    setFieldErrors({})
+    setSaveError(null)
+    setSuccessMessage(null)
   }
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
+    if (isSaving) {
+      return
+    }
+
+    setSuccessMessage(null)
+    setSaveError(null)
+
+    const errors = validateDbmCreateForm(form)
+    setFieldErrors(errors)
+    if (hasDbmCreateFieldErrors(errors)) {
+      return
+    }
+
+    const payload = toCreateDbmWorkOrderRequest(form)
+    createMutation.mutate(payload, {
+      onSuccess: (created) => {
+        setForm(DEFAULT_DBM_CREATE_FORM)
+        setFieldErrors({})
+        setSaveError(null)
+        setSuccessMessage(
+          `Case created successfully with Case ID ${created.caseId}.`,
+        )
+      },
+      onError: (error) => {
+        setSaveError(toUserFriendlyError(error))
+      },
+    })
   }
+
+  const lookupErrorMessage =
+    lookupsError instanceof Error
+      ? lookupsError.message
+      : 'Failed to load lookup data.'
 
   return (
     <div className="dbm-page" data-testid="dbm-work-order-create-page">
       <div className="dbm-page-title">DBM Work Order Request</div>
 
       <form className="dbm-form" onSubmit={handleSubmit} noValidate>
+        {lookupsLoading && (
+          <div
+            className="dbm-lookup-status dbm-lookup-loading"
+            role="status"
+            data-testid="dbm-lookups-loading"
+          >
+            Loading lookup data…
+          </div>
+        )}
+
+        {lookupsFailed && (
+          <div
+            className="dbm-lookup-status dbm-lookup-error"
+            role="alert"
+            data-testid="dbm-lookups-error"
+          >
+            <span>{lookupErrorMessage}</span>
+            <button
+              type="button"
+              className="dbm-btn dbm-btn-secondary"
+              data-testid="dbm-lookups-retry"
+              onClick={() => void refetchLookups()}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {successMessage && (
+          <div
+            className="dbm-lookup-status dbm-save-success"
+            role="status"
+            data-testid="dbm-save-success"
+          >
+            {successMessage}
+          </div>
+        )}
+
+        {saveError && (
+          <div
+            className="dbm-lookup-status dbm-lookup-error"
+            role="alert"
+            data-testid="dbm-save-error"
+          >
+            {saveError}
+          </div>
+        )}
+
         {/* Section 1 — Request Information */}
         <section
           className="dbm-section"
@@ -156,10 +234,16 @@ export function DbmWorkOrderCreatePage() {
           <h2 className="dbm-section-header">Request Information</h2>
           <div className="dbm-section-body">
             <div className="dbm-grid">
-              <Field label="Vendor" required>
+              <Field
+                label="Vendor"
+                required
+                error={fieldErrors.vendor}
+                invalid={!!fieldErrors.vendor}
+              >
                 <select
                   data-testid="dbm-vendor"
                   value={form.vendor}
+                  aria-invalid={!!fieldErrors.vendor}
                   onChange={(e) => setField('vendor', e.target.value)}
                 >
                   <option value="">Select Vendor</option>
@@ -180,19 +264,31 @@ export function DbmWorkOrderCreatePage() {
                 </div>
               </div>
 
-              <Field label="Requested Due Date" required>
+              <Field
+                label="Requested Due Date"
+                required
+                error={fieldErrors.requestedDueDate}
+                invalid={!!fieldErrors.requestedDueDate}
+              >
                 <input
                   data-testid="dbm-requested-due-date"
                   type="date"
                   value={form.requestedDueDate}
+                  aria-invalid={!!fieldErrors.requestedDueDate}
                   onChange={(e) => setField('requestedDueDate', e.target.value)}
                 />
               </Field>
 
-              <Field label="Priority" required>
+              <Field
+                label="Priority"
+                required
+                error={fieldErrors.priority}
+                invalid={!!fieldErrors.priority}
+              >
                 <select
                   data-testid="dbm-priority"
                   value={form.priority}
+                  aria-invalid={!!fieldErrors.priority}
                   onChange={(e) => setField('priority', e.target.value)}
                 >
                   {PRIORITY_OPTIONS.map((opt) => (
@@ -203,20 +299,33 @@ export function DbmWorkOrderCreatePage() {
                 </select>
               </Field>
 
-              <Field label="Subject" required className="dbm-span-2">
+              <Field
+                label="Subject"
+                required
+                className="dbm-span-2"
+                error={fieldErrors.subject}
+                invalid={!!fieldErrors.subject}
+              >
                 <input
                   data-testid="dbm-subject"
                   type="text"
                   maxLength={200}
                   value={form.subject}
+                  aria-invalid={!!fieldErrors.subject}
                   onChange={(e) => setField('subject', e.target.value)}
                 />
               </Field>
 
-              <Field label="Status" required>
+              <Field
+                label="Status"
+                required
+                error={fieldErrors.status}
+                invalid={!!fieldErrors.status}
+              >
                 <select
                   data-testid="dbm-status"
                   value={form.status}
+                  aria-invalid={!!fieldErrors.status}
                   onChange={(e) => setField('status', e.target.value)}
                 >
                   {STATUS_OPTIONS.map((opt) => (
@@ -259,10 +368,16 @@ export function DbmWorkOrderCreatePage() {
           <h2 className="dbm-section-header">File Request</h2>
           <div className="dbm-section-body">
             <div className="dbm-grid">
-              <Field label="Transfer Type" required>
+              <Field
+                label="Transfer Type"
+                required
+                error={fieldErrors.transferType}
+                invalid={!!fieldErrors.transferType}
+              >
                 <select
                   data-testid="dbm-transfer-type"
                   value={form.transferType}
+                  aria-invalid={!!fieldErrors.transferType}
                   onChange={(e) => setField('transferType', e.target.value)}
                 >
                   <option value="">Select Transfer Type</option>
@@ -291,10 +406,16 @@ export function DbmWorkOrderCreatePage() {
                 />
               </Field>
 
-              <Field label="Return File Expected" required>
+              <Field
+                label="Return File Expected"
+                required
+                error={fieldErrors.returnFileExpected}
+                invalid={!!fieldErrors.returnFileExpected}
+              >
                 <select
                   data-testid="dbm-return-file-expected"
                   value={form.returnFileExpected}
+                  aria-invalid={!!fieldErrors.returnFileExpected}
                   onChange={(e) => setField('returnFileExpected', e.target.value)}
                 >
                   <option value="">Select</option>
@@ -382,14 +503,21 @@ export function DbmWorkOrderCreatePage() {
           <h2 className="dbm-section-header">Marketing Research Request</h2>
           <div className="dbm-section-body">
             <div className="dbm-grid">
-              <Field label="Client" required>
+              <Field
+                label="Client"
+                required
+                error={fieldErrors.clientId}
+                invalid={!!fieldErrors.clientId}
+              >
                 <select
                   data-testid="dbm-client"
                   value={form.clientId}
+                  aria-invalid={!!fieldErrors.clientId}
                   onChange={(e) => setField('clientId', e.target.value)}
+                  disabled={!lookupsReady}
                 >
                   <option value="">Select Client</option>
-                  {CLIENT_OPTIONS.map((opt) => (
+                  {clients.map((opt) => (
                     <option key={opt.code} value={opt.code}>
                       {opt.label}
                     </option>
@@ -400,7 +528,7 @@ export function DbmWorkOrderCreatePage() {
               <Field label="Spoken Keys">
                 <MultiSelectChips
                   testId="dbm-spoken-keys"
-                  options={SPOKEN_KEY_OPTIONS.map((o) => ({
+                  options={spokenKeys.map((o) => ({
                     value: o.code,
                     label: o.label,
                   }))}
@@ -411,6 +539,7 @@ export function DbmWorkOrderCreatePage() {
                       toggleMultiValue(form.spokenKeys, value),
                     )
                   }
+                  disabled={!lookupsReady}
                 />
               </Field>
 
@@ -418,10 +547,11 @@ export function DbmWorkOrderCreatePage() {
                 <select
                   data-testid="dbm-event-id"
                   value={form.eventId}
-                  onChange={(e) => setField('eventId', e.target.value)}
+                  onChange={(e) => handleEventIdChange(e.target.value)}
+                  disabled={!lookupsReady}
                 >
                   <option value="">Select Event ID</option>
-                  {EVENT_ID_OPTIONS.map((opt) => (
+                  {eventIds.map((opt) => (
                     <option key={opt.code} value={opt.code}>
                       {opt.label}
                     </option>
@@ -550,6 +680,7 @@ export function DbmWorkOrderCreatePage() {
             type="button"
             className="dbm-btn dbm-btn-secondary"
             data-testid="dbm-cancel"
+            disabled={isSaving}
           >
             Cancel
           </button>
@@ -558,6 +689,7 @@ export function DbmWorkOrderCreatePage() {
             className="dbm-btn dbm-btn-secondary"
             data-testid="dbm-reset"
             onClick={handleReset}
+            disabled={isSaving}
           >
             Reset
           </button>
@@ -565,8 +697,10 @@ export function DbmWorkOrderCreatePage() {
             type="submit"
             className="dbm-btn dbm-btn-primary"
             data-testid="dbm-save"
+            disabled={isSaving}
+            aria-busy={isSaving}
           >
-            Save
+            {isSaving ? 'Saving…' : 'Save'}
           </button>
         </footer>
       </form>
@@ -578,20 +712,31 @@ function Field({
   label,
   required,
   className,
+  error,
+  invalid,
   children,
 }: {
   label: string
   required?: boolean
   className?: string
+  error?: string
+  invalid?: boolean
   children: ReactNode
 }) {
   return (
-    <label className={`dbm-field ${className ?? ''}`.trim()}>
+    <label
+      className={`dbm-field ${invalid ? 'dbm-field-invalid' : ''} ${className ?? ''}`.trim()}
+    >
       <span className="dbm-label">
         {label}
         {required ? <span className="dbm-required"> *</span> : null}
       </span>
       {children}
+      {error ? (
+        <span className="dbm-field-error" role="alert">
+          {error}
+        </span>
+      ) : null}
     </label>
   )
 }
@@ -601,11 +746,13 @@ function MultiSelectChips({
   options,
   selected,
   onToggle,
+  disabled = false,
 }: {
   testId: string
   options: ReadonlyArray<{ value: string; label: string }>
   selected: string[]
   onToggle: (value: string) => void
+  disabled?: boolean
 }) {
   return (
     <div
@@ -613,6 +760,7 @@ function MultiSelectChips({
       data-testid={testId}
       role="group"
       aria-label={testId}
+      aria-disabled={disabled || undefined}
     >
       {options.map((opt) => (
         <label key={opt.value} className="dbm-chip">
@@ -620,6 +768,7 @@ function MultiSelectChips({
             type="checkbox"
             checked={selected.includes(opt.value)}
             onChange={() => onToggle(opt.value)}
+            disabled={disabled}
           />
           <span>{opt.label}</span>
         </label>

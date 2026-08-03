@@ -50,6 +50,52 @@
   gap: 18px;
 }
 
+.dbm-lookup-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--dbm-border);
+  border-radius: 2px;
+  background: var(--dbm-white);
+  color: var(--dbm-text);
+}
+
+.dbm-lookup-loading {
+  color: var(--dbm-muted);
+}
+
+.dbm-lookup-error {
+  border-color: #e0b4af;
+  background: #fdf4f3;
+  color: var(--dbm-coral);
+}
+
+.dbm-save-success {
+  border-color: #a8c5a8;
+  background: #f1f8f1;
+  color: #1f5c2e;
+}
+
+.dbm-field-invalid input,
+.dbm-field-invalid select,
+.dbm-field-invalid textarea {
+  border-color: var(--dbm-coral);
+  background: #fdf4f3;
+}
+
+.dbm-field-error {
+  color: var(--dbm-coral);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.dbm-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .dbm-section {
   background: var(--dbm-white);
   border: 1px solid var(--dbm-border);
