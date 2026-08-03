@@ -40,7 +40,8 @@ public class WorkflowServiceImpl implements WorkflowService {
     @Override
     @Transactional
     public WorkflowRef start(StartWorkflowCommand command) {
-        requireWfView();
+        // Called as a side-effect of case create; list/get still require WF_VIEW + receiving team.
+        currentUserService.requirePrincipal();
         CaseEntity caseEntity = caseRepository.findById(command.caseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Case", String.valueOf(command.caseId())));
         TeamEntity team = teamRepository.findByCode(command.receiverTeamCode())
@@ -109,6 +110,9 @@ public class WorkflowServiceImpl implements WorkflowService {
     }
 
     private WorkflowQueueItem toQueueItem(WorkflowEntity w) {
+        String teamCode = teamRepository.findById(w.getReceivingTeamId())
+                .map(TeamEntity::getCode)
+                .orElse("");
         return new WorkflowQueueItem(
                 w.getId(),
                 "WF-" + w.getId(),
@@ -122,8 +126,11 @@ public class WorkflowServiceImpl implements WorkflowService {
                 nullToEmpty(w.getOwnerName()),
                 w.getPriority(),
                 w.getReceivedAt(),
+                w.getUpdatedAt(),
                 nullToEmpty(w.getActionLabel()),
-                nullToEmpty(w.getLogs()));
+                nullToEmpty(w.getLogs()),
+                nullToEmpty(w.getCreatedBy()),
+                teamCode);
     }
 
     private void assertReceivingTeamAccess(Long receivingTeamId) {

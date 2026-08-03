@@ -10,8 +10,6 @@ import { CasesGrid } from '@/features/cases/components/CasesGrid'
 import { CasesPagination } from '@/features/cases/components/CasesPagination'
 import { CasesToolbar } from '@/features/cases/components/CasesToolbar'
 import { NewCaseTypeModal } from '@/features/cases/components/NewCaseTypeModal'
-import { NotificationQueuePanel } from '@/features/cases/components/NotificationQueuePanel'
-import { WorkflowQueuePanel } from '@/features/cases/components/WorkflowQueuePanel'
 import {
   EMPTY_ADVANCED_FILTERS,
   EMPTY_COLUMN_FILTERS,
@@ -46,9 +44,6 @@ export function CasesSearchPage() {
     permissions.includes('CASES_EXPORT') ||
     permissions.includes('CASES_ACCESS') ||
     permissions.includes('CASES_VIEW')
-  const canViewWorkflow = permissions.includes('WF_VIEW')
-  const canViewNotification = permissions.includes('NOTIF_VIEW')
-
   const [allCases, setAllCases] = useState<CaseRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -224,9 +219,6 @@ export function CasesSearchPage() {
           }}
         />
       </div>
-
-      {canViewWorkflow ? <WorkflowQueuePanel onToast={showToast} /> : null}
-      {canViewNotification ? <NotificationQueuePanel onToast={showToast} /> : null}
 
       {prefsSavedMessage ? (
         <div className="cases-toast" role="status" data-testid="cases-prefs-toast">

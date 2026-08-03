@@ -10,4 +10,6 @@ public interface CurrentUserService {
     String requireDisplayName();
 
     boolean hasPermission(String permissionCode);
+
+    UserPrincipal requirePrincipal();
 }

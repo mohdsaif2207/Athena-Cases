@@ -110,6 +110,9 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private NotificationQueueItem toQueueItem(NotificationEntity n) {
+        String teamCode = teamRepository.findById(n.getReceivingTeamId())
+                .map(TeamEntity::getCode)
+                .orElse("");
         return new NotificationQueueItem(
                 n.getId(),
                 "NTF-" + n.getId(),
@@ -120,7 +123,12 @@ public class NotificationServiceImpl implements NotificationService {
                 nullToEmpty(n.getMessageObject()),
                 n.getMessage(),
                 n.getReceivedAt(),
-                nullToEmpty(n.getDetails()));
+                n.getUpdatedAt(),
+                nullToEmpty(n.getDetails()),
+                nullToEmpty(n.getCreatedBy()),
+                "",
+                "",
+                teamCode);
     }
 
     private void requireNotifView() {

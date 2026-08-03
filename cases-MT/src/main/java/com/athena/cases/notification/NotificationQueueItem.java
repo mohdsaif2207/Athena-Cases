@@ -15,6 +15,11 @@ public record NotificationQueueItem(
         String messageObject,
         String message,
         Instant receivedAt,
-        String details
+        Instant updatedAt,
+        String details,
+        String createdBy,
+        String priority,
+        String owner,
+        String receivingTeamCode
 ) {
 }
