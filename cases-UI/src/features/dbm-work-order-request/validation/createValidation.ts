@@ -3,6 +3,8 @@ import type { DbmCreateFormState } from '../types/form'
 export const TRANSFER_TYPE_OTHER = 'Other (Requires Description)'
 export const TRANSFER_TYPE_CUSTOM = 'Custom (Requires Approval)'
 
+const NUMERIC_VALUE_MESSAGE = 'Please enter a numeric value.'
+
 /** Story §9.1 mandatory create fields. */
 export type DbmMandatoryField =
   | 'vendor'
@@ -14,10 +16,17 @@ export type DbmMandatoryField =
   | 'returnFileExpected'
   | 'clientId'
 
-/** Fields that can show create-form validation messages (includes conditional). */
-export type DbmCreateValidatedField = DbmMandatoryField | 'specialInstructions'
+/** Fields that can show create-form validation messages. */
+export type DbmCreateValidatedField =
+  | DbmMandatoryField
+  | 'specialInstructions'
+  | 'expectedQuantity'
+  | 'mediaOutQuantity'
+  | 'totalRecordsUpdated'
 
-export type DbmCreateFieldErrors = Partial<Record<DbmCreateValidatedField, string>>
+export type DbmCreateFieldErrors = Partial<
+  Record<DbmCreateValidatedField, string>
+>
 
 type MandatoryRule = {
   field: DbmMandatoryField
@@ -35,6 +44,12 @@ const MANDATORY_RULES: MandatoryRule[] = [
   { field: 'clientId', label: 'Client' },
 ]
 
+const NUMERIC_OPTIONAL_FIELDS = [
+  'expectedQuantity',
+  'mediaOutQuantity',
+  'totalRecordsUpdated',
+] as const satisfies ReadonlyArray<DbmCreateValidatedField>
+
 /** True when Special Instructions is required by Transfer Type. */
 export function isSpecialInstructionsRequired(transferType: string): boolean {
   return transferType === TRANSFER_TYPE_OTHER
@@ -45,9 +60,18 @@ export function showsCustomApprovalHint(transferType: string): boolean {
   return transferType === TRANSFER_TYPE_CUSTOM
 }
 
+/** Empty is allowed; otherwise must be digits only (non-negative integer text). */
+export function isOptionalNumericValue(value: string): boolean {
+  const trimmed = value.trim()
+  if (trimmed === '') {
+    return true
+  }
+  return /^\d+$/.test(trimmed)
+}
+
 /**
- * Validates story-mandated create fields plus Transfer Type → Special Instructions.
- * Returns an empty object when valid.
+ * Validates story-mandated create fields, Transfer Type → Special Instructions,
+ * and optional numeric quantity fields.
  */
 export function validateDbmCreateForm(
   form: DbmCreateFormState,
@@ -66,6 +90,12 @@ export function validateDbmCreateForm(
     form.specialInstructions.trim() === ''
   ) {
     errors.specialInstructions = 'Special Instructions is required.'
+  }
+
+  for (const field of NUMERIC_OPTIONAL_FIELDS) {
+    if (!isOptionalNumericValue(form[field])) {
+      errors[field] = NUMERIC_VALUE_MESSAGE
+    }
   }
 
   return errors

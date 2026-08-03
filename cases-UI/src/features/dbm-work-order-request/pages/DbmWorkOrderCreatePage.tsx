@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { EventIdLookupItem } from '../api/lookups'
+import { useIsDbmUser } from '../auth/dbmAccess'
 import { useCreateDbmWorkOrder, toUserFriendlyError } from '../hooks/useCreateDbmWorkOrder'
 import { useDbmLookups } from '../hooks/useDbmLookups'
 import { toCreateDbmWorkOrderRequest } from '../mappers/toCreateRequest'
@@ -84,6 +85,7 @@ export function DbmWorkOrderCreatePage() {
 
   const createMutation = useCreateDbmWorkOrder()
   const isSaving = createMutation.isPending
+  const isDbmUser = useIsDbmUser()
 
   const clients = lookups?.clients ?? []
   const eventIds = lookups?.eventIds ?? []
@@ -121,7 +123,10 @@ export function DbmWorkOrderCreatePage() {
       key === 'transferType' ||
       key === 'returnFileExpected' ||
       key === 'clientId' ||
-      key === 'specialInstructions'
+      key === 'specialInstructions' ||
+      key === 'expectedQuantity' ||
+      key === 'mediaOutQuantity' ||
+      key === 'totalRecordsUpdated'
     ) {
       clearFieldError(key)
     }
@@ -503,12 +508,17 @@ export function DbmWorkOrderCreatePage() {
                 />
               </Field>
 
-              <Field label="Expected Quantity">
+              <Field
+                label="Expected Quantity"
+                error={fieldErrors.expectedQuantity}
+                invalid={!!fieldErrors.expectedQuantity}
+              >
                 <input
                   data-testid="dbm-expected-quantity"
-                  type="number"
-                  min={0}
+                  type="text"
+                  inputMode="numeric"
                   value={form.expectedQuantity}
+                  aria-invalid={!!fieldErrors.expectedQuantity}
                   onChange={(e) => setField('expectedQuantity', e.target.value)}
                 />
               </Field>
@@ -631,12 +641,17 @@ export function DbmWorkOrderCreatePage() {
                 />
               </Field>
 
-              <Field label="Media Out Quantity">
+              <Field
+                label="Media Out Quantity"
+                error={fieldErrors.mediaOutQuantity}
+                invalid={!!fieldErrors.mediaOutQuantity}
+              >
                 <input
                   data-testid="dbm-media-out-quantity"
-                  type="number"
-                  min={0}
+                  type="text"
+                  inputMode="numeric"
                   value={form.mediaOutQuantity}
+                  aria-invalid={!!fieldErrors.mediaOutQuantity}
                   onChange={(e) => setField('mediaOutQuantity', e.target.value)}
                 />
               </Field>
@@ -687,46 +702,57 @@ export function DbmWorkOrderCreatePage() {
           </div>
         </section>
 
-        {/* Section 4 — For DBM Use Only */}
-        <section className="dbm-section" data-testid="dbm-section-dbm-use-only">
-          <h2 className="dbm-section-header">For DBM Use Only</h2>
-          <div className="dbm-section-body">
-            <div className="dbm-grid">
-              <Field label="DBM Work Order Number">
-                <input
-                  data-testid="dbm-work-order-number"
-                  type="text"
-                  maxLength={64}
-                  value={form.dbmWorkOrderNumber}
-                  onChange={(e) => setField('dbmWorkOrderNumber', e.target.value)}
-                />
-              </Field>
+        {/* Section 4 — For DBM Use Only (role-gated via isDbmUser) */}
+        {isDbmUser ? (
+          <section className="dbm-section" data-testid="dbm-section-dbm-use-only">
+            <h2 className="dbm-section-header">For DBM Use Only</h2>
+            <div className="dbm-section-body">
+              <div className="dbm-grid">
+                <Field label="DBM Work Order Number">
+                  <input
+                    data-testid="dbm-work-order-number"
+                    type="text"
+                    maxLength={64}
+                    value={form.dbmWorkOrderNumber}
+                    onChange={(e) =>
+                      setField('dbmWorkOrderNumber', e.target.value)
+                    }
+                  />
+                </Field>
 
-              <Field label="Total Records Updated">
-                <input
-                  data-testid="dbm-total-records-updated"
-                  type="number"
-                  min={0}
-                  value={form.totalRecordsUpdated}
-                  onChange={(e) =>
-                    setField('totalRecordsUpdated', e.target.value)
-                  }
-                />
-              </Field>
+                <Field
+                  label="Total Records Updated"
+                  error={fieldErrors.totalRecordsUpdated}
+                  invalid={!!fieldErrors.totalRecordsUpdated}
+                >
+                  <input
+                    data-testid="dbm-total-records-updated"
+                    type="text"
+                    inputMode="numeric"
+                    value={form.totalRecordsUpdated}
+                    aria-invalid={!!fieldErrors.totalRecordsUpdated}
+                    onChange={(e) =>
+                      setField('totalRecordsUpdated', e.target.value)
+                    }
+                  />
+                </Field>
 
-              <div className="dbm-field-spacer" aria-hidden />
+                <div className="dbm-field-spacer" aria-hidden />
 
-              <Field label="DBM Completion Notes" className="dbm-span-3">
-                <textarea
-                  data-testid="dbm-completion-notes"
-                  rows={4}
-                  value={form.dbmCompletionNotes}
-                  onChange={(e) => setField('dbmCompletionNotes', e.target.value)}
-                />
-              </Field>
+                <Field label="DBM Completion Notes" className="dbm-span-3">
+                  <textarea
+                    data-testid="dbm-completion-notes"
+                    rows={4}
+                    value={form.dbmCompletionNotes}
+                    onChange={(e) =>
+                      setField('dbmCompletionNotes', e.target.value)
+                    }
+                  />
+                </Field>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        ) : null}
 
         <footer className="dbm-actions">
           <button
