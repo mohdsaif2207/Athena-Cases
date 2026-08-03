@@ -20,7 +20,10 @@ Welcome to **Athena Cases**.
 | IDE | IntelliJ / VS Code + Cursor |
 
 ```bash
-# Backend
+# Backend — one-time: copy cases-MT/.env.example → cases-MT/.env and fill DB_*
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\local\run-backend.ps1
+
+# Backend verify (no server)
 cd cases-MT && .\mvnw.cmd verify
 
 # Frontend

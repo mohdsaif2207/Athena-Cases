@@ -11,12 +11,23 @@
 
 ## Run locally
 
-```bash
-cd cases-MT
-.\mvnw.cmd spring-boot:run
+`application.properties` uses `${DB_URL}`, `${DB_USER}`, `${DB_PASSWORD}`.
+
+**One-time:** copy `cases-MT/.env.example` → `cases-MT/.env` and fill real values.
+
+Then from `cases-MT`:
+
+```powershell
+.\mvnw.cmd -DskipTests spring-boot:run
 ```
 
-Set `SPRING_PROFILES_ACTIVE=dev` (default once configured).
+A local `EnvironmentPostProcessor` loads `.env` automatically. OS / CI environment variables still override `.env` (production-safe).
+
+Optional helper (also loads `.env` into the shell before Maven):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\local\run-backend.ps1
+```
 
 ## Where to put code
 
