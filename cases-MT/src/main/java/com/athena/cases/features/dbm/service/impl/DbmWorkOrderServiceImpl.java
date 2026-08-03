@@ -24,11 +24,15 @@ import com.athena.cases.features.dbm.repository.DbmWorkOrderCoverageLevelReposit
 import com.athena.cases.features.dbm.repository.DbmWorkOrderRepository;
 import com.athena.cases.features.dbm.repository.DbmWorkOrderSpokenKeyRepository;
 import com.athena.cases.features.dbm.service.DbmWorkOrderService;
+import com.athena.cases.notification.NotificationService;
+import com.athena.cases.notification.NotifyTeamCommand;
+import com.athena.cases.workflow.StartWorkflowCommand;
+import com.athena.cases.workflow.WorkflowService;
 
 /**
  * DBM Work Order Request service.
- * Create path persists Case + DBM detail + multi-select children.
- * Workflow and notification remain deferred.
+ * Create path persists Case + DBM detail + multi-select children,
+ * then starts shared workflow and notifies the DBM receiving team.
  */
 @Service
 @Transactional
@@ -52,18 +56,24 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
     private final DbmWorkOrderCoverageLevelRepository dbmWorkOrderCoverageLevelRepository;
     private final DbmWorkOrderAccountTypeRepository dbmWorkOrderAccountTypeRepository;
     private final DbmWorkOrderSpokenKeyRepository dbmWorkOrderSpokenKeyRepository;
+    private final WorkflowService workflowService;
+    private final NotificationService notificationService;
 
     public DbmWorkOrderServiceImpl(
             CaseRepository caseRepository,
             DbmWorkOrderRepository dbmWorkOrderRepository,
             DbmWorkOrderCoverageLevelRepository dbmWorkOrderCoverageLevelRepository,
             DbmWorkOrderAccountTypeRepository dbmWorkOrderAccountTypeRepository,
-            DbmWorkOrderSpokenKeyRepository dbmWorkOrderSpokenKeyRepository) {
+            DbmWorkOrderSpokenKeyRepository dbmWorkOrderSpokenKeyRepository,
+            WorkflowService workflowService,
+            NotificationService notificationService) {
         this.caseRepository = caseRepository;
         this.dbmWorkOrderRepository = dbmWorkOrderRepository;
         this.dbmWorkOrderCoverageLevelRepository = dbmWorkOrderCoverageLevelRepository;
         this.dbmWorkOrderAccountTypeRepository = dbmWorkOrderAccountTypeRepository;
         this.dbmWorkOrderSpokenKeyRepository = dbmWorkOrderSpokenKeyRepository;
+        this.workflowService = workflowService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -103,8 +113,19 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
 
         DbmWorkOrder savedDbm = dbmWorkOrderRepository.save(dbmWorkOrder);
 
-        // TODO trigger workflow (Pending Assignment, assigned_team=DBM)
-        // TODO trigger notification for DBM receiving team
+        Long caseId = savedCase.getId();
+        workflowService.start(new StartWorkflowCommand(
+                caseId,
+                "DBM_WORK_ORDER",
+                "DBM",
+                "PENDING_ASSIGNMENT"));
+
+        notificationService.notifyTeam(new NotifyTeamCommand(
+                caseId,
+                "DBM",
+                "A new DBM Work Order Request (Case " + savedCase.getCaseNumber()
+                        + ") has been assigned to your team.",
+                "/cases/" + caseId));
 
         return toResponse(savedCase, savedDbm);
     }
