@@ -90,8 +90,8 @@ class BillingDepartmentRequestControllerTest {
     void should_return400_when_serviceThrowsBillingValidation() throws Exception {
         when(billingDepartmentRequestService.create(any(BillingDepartmentRequestCreateRequest.class)))
                 .thenThrow(new BillingValidationException(
-                        "businessCaseId",
-                        "businessCaseId must be provided by shared Case Management"));
+                        "campaignId",
+                        "campaignId must be an active campaign"));
 
         mockMvc.perform(post("/api/v1/billing-department-requests")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -99,7 +99,7 @@ class BillingDepartmentRequestControllerTest {
                         .content(OBJECT_MAPPER.writeValueAsString(minimalCreateJson())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.error.field").value("businessCaseId"))
+                .andExpect(jsonPath("$.error.field").value("campaignId"))
                 .andExpect(jsonPath("$.error.requestId").value("req-create-2"));
     }
 

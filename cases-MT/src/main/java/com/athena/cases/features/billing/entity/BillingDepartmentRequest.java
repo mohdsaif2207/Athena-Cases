@@ -49,10 +49,8 @@ public class BillingDepartmentRequest {
 
     /**
      * Billing display identifier (BIL######). Not the surrogate PK.
-     *
-     * <p>TODO Replace with actual implementation after module integration —
-     * Generation pending shared Case Management / platform ID strategy.
-     * Shared list-facing identity remains {@code cases.case_number}.
+     * Allocated by shared Case Management as {@code cases.case_number}; Billing stores the same
+ * value in {@code business_case_id} (no second allocation).
      */
     @Column(name = "business_case_id", nullable = false, unique = true, length = 16)
     private String businessCaseId;

@@ -13,6 +13,8 @@ spring:
     schemas: cases_mt
     default-schema: cases_mt
     create-schemas: true
+    # Shared RDS may have teammate migrations not present in this branch yet.
+    ignore-migration-patterns: "*:missing"
 
 app:
   cors:

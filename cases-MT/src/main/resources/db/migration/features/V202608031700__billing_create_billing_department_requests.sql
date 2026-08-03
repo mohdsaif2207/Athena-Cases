@@ -3,6 +3,10 @@
 -- feature: Billing Department Request
 -- lld: Billing_Department_Request_LLD.md §13.2
 --
+-- RE-VERSIONED: originally V202607311910 — never applied on shared Postgres
+-- (Flyway head already past that version). New ID is after current shared head
+-- V202608031600 so migrate runs in order without outOfOrder.
+--
 -- DEPENDENCY (shared — not owned by Billing):
 --   Requires table "cases" (Lead / Case Management Flyway) to exist before this
 --   migration runs in any integrated environment. Billing stores case_id (BIGINT)

@@ -205,8 +205,10 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
       }
 
       const created = await createBillingDepartmentRequest(formValuesToCreatePayload(values))
-      showToast(`Case created successfully with Case ID ${created.caseNumber}.`)
-      navigate('/cases')
+      const displayId = created.businessCaseId || created.caseNumber
+      showToast(`Case created successfully with Case ID ${displayId}.`)
+      // Keep toast visible — navigating immediately unmounts this page's toast.
+      window.setTimeout(() => navigate('/cases'), 1800)
     } catch (err) {
       const fieldErrors = mapApiErrorsToFields(err)
       if (Object.keys(fieldErrors).length) setErrors(fieldErrors)

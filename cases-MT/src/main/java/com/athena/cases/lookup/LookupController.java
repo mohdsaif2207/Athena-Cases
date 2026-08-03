@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -33,6 +34,41 @@ public class LookupController {
     @PreAuthorize("hasAuthority('PERM_CASES_CREATE') or hasAuthority('PERM_CASES_ACCESS')")
     public ResponseEntity<ApiResponse<List<LookupItem>>> clients() {
         return ResponseEntity.ok(ApiResponse.of(lookupService.listActiveClients(), currentRequestId()));
+    }
+
+    @GetMapping("/campaigns")
+    @PreAuthorize("hasAuthority('PERM_CASES_CREATE') or hasAuthority('PERM_CASES_ACCESS')")
+    public ResponseEntity<ApiResponse<List<LookupItem>>> campaigns() {
+        return ResponseEntity.ok(ApiResponse.of(lookupService.listActiveCampaigns(), currentRequestId()));
+    }
+
+    @GetMapping("/products")
+    @PreAuthorize("hasAuthority('PERM_CASES_CREATE') or hasAuthority('PERM_CASES_ACCESS')")
+    public ResponseEntity<ApiResponse<List<LookupItem>>> products(
+            @RequestParam(required = false) String query
+    ) {
+        return ResponseEntity.ok(ApiResponse.of(lookupService.listProducts(query), currentRequestId()));
+    }
+
+    @GetMapping("/segments")
+    @PreAuthorize("hasAuthority('PERM_CASES_CREATE') or hasAuthority('PERM_CASES_ACCESS')")
+    public ResponseEntity<ApiResponse<List<LookupItem>>> segments(
+            @RequestParam(required = false) String clientId
+    ) {
+        return ResponseEntity.ok(ApiResponse.of(lookupService.listSegments(clientId), currentRequestId()));
+    }
+
+    /**
+     * Parent-case candidates from shared {@code cases} (real {@code cases.id} values).
+     */
+    @GetMapping("/parent-cases")
+    @PreAuthorize(
+            "hasAuthority('PERM_CASES_CREATE') or hasAuthority('PERM_CASES_VIEW') or hasAuthority('PERM_CASES_ACCESS')"
+    )
+    public ResponseEntity<ApiResponse<List<LookupItem>>> parentCases(
+            @RequestParam(required = false) String query
+    ) {
+        return ResponseEntity.ok(ApiResponse.of(lookupService.findParentCases(query), currentRequestId()));
     }
 
     @GetMapping("/event-ids")

@@ -16,19 +16,16 @@ import com.athena.cases.features.billing.enums.BillingHoldType;
 import com.athena.cases.features.billing.exception.BillingConflictException;
 import com.athena.cases.features.billing.exception.BillingResourceNotFoundException;
 import com.athena.cases.features.billing.exception.BillingValidationException;
+import com.athena.cases.features.billing.lookup.BillingLookupService;
 import com.athena.cases.features.billing.mapper.BillingDepartmentRequestMapper;
 import com.athena.cases.features.billing.repository.BillingDepartmentRequestRepository;
 import com.athena.cases.lookup.LookupItem;
 import com.athena.cases.lookup.LookupService;
-import com.athena.cases.notification.NotificationService;
-import com.athena.cases.notification.NotifyTeamCommand;
 import com.athena.cases.permission.PermissionService;
 import com.athena.cases.security.CurrentUserService;
-import com.athena.cases.workflow.StartWorkflowCommand;
 import com.athena.cases.workflow.WorkflowRef;
 import com.athena.cases.workflow.WorkflowService;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,11 +42,10 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code priority}, {@code status}, {@code parentCaseId}, {@code parentCaseNumber} are left null
  * until Case Management enriches {@code CaseRef} (or equivalent).
  *
- * <p><b>Shared dependency — businessCaseId:</b>
- * TODO Replace with actual implementation after module integration —
- * Obtain from shared Case Management / platform ID generation. Billing does not allocate
- * {@code BIL######} values. Create cannot persist the Billing extension until that API exists
- * ({@code business_case_id} is NOT NULL in the Billing schema).
+ * <p><b>Shared dependency — businessCaseId / caseNumber:</b> Case Management allocates the
+ * display id ({@code BIL######}) via {@link BusinessCaseIdService} and returns it on
+ * {@link CaseRef#caseNumber()}. Billing copies that same value into {@code business_case_id}
+ * (no second allocation).
  */
 @Service
 public class BillingDepartmentRequestServiceImpl implements BillingDepartmentRequestService {
@@ -60,7 +56,7 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
     private final BillingDepartmentRequestMapper mapper;
     private final CaseManagementService caseManagementService;
     private final WorkflowService workflowService;
-    private final NotificationService notificationService;
+    private final BillingLookupService billingLookupService;
     private final LookupService lookupService;
     private final CurrentUserService currentUserService;
     private final PermissionService permissionService;
@@ -70,7 +66,7 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
             BillingDepartmentRequestMapper mapper,
             CaseManagementService caseManagementService,
             WorkflowService workflowService,
-            NotificationService notificationService,
+            BillingLookupService billingLookupService,
             LookupService lookupService,
             CurrentUserService currentUserService,
             PermissionService permissionService
@@ -79,7 +75,7 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
         this.mapper = mapper;
         this.caseManagementService = caseManagementService;
         this.workflowService = workflowService;
-        this.notificationService = notificationService;
+        this.billingLookupService = billingLookupService;
         this.lookupService = lookupService;
         this.currentUserService = currentUserService;
         this.permissionService = permissionService;
@@ -90,9 +86,6 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
     public BillingDepartmentRequestResponse create(BillingDepartmentRequestCreateRequest request) {
         String userId = currentUserService.requireUserId();
         permissionService.require(userId, PermissionCodes.CASES_CREATE);
-
-        // Fail before shared side-effects: Billing must not invent Business Case IDs.
-        String businessCaseId = requireSharedBusinessCaseId();
 
         String caseOwner = currentUserService.requireDisplayName();
         String priority = blankToDefault(request.priority(), BillingConstants.DEFAULT_PRIORITY);
@@ -128,6 +121,9 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
                     "Billing Department Request already exists for caseId=" + caseRef.caseId());
         }
 
+        // Same display id as shared cases.case_number (allocated once by Case Management).
+        String businessCaseId = requireBillingDisplayId(caseRef.caseNumber());
+
         Instant now = Instant.now();
         BillingDepartmentRequest entity = new BillingDepartmentRequest();
         entity.setCaseId(caseRef.caseId());
@@ -140,23 +136,12 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
         entity.setVersion(1);
         billingRepository.save(entity);
 
-        WorkflowRef workflow = workflowService.start(new StartWorkflowCommand(
-                caseRef.caseId(),
-                BillingConstants.RECEIVER_TEAM_BILLING_OPS,
-                BillingConstants.WORKFLOW_STATUS_PENDING_ASSIGNMENT
-        ));
-
-        notificationService.notifyTeam(new NotifyTeamCommand(
-                caseRef.caseId(),
-                BillingConstants.RECEIVER_TEAM_BILLING_OPS,
-                BillingConstants.newCaseNotificationMessage(caseRef.caseNumber()),
-                BillingConstants.caseDeepLink(caseRef.caseId())
-        ));
-
+        // Workflow + notification are owned by CaseManagementService.createCase
+        // (enqueueReceivingTeamWork) — do not start a second instance here.
         log.info("billing department request created - caseId={} businessCaseId={} userId={}",
                 caseRef.caseId(), entity.getBusinessCaseId(), userId);
 
-        return toResponse(caseRef, entity, workflow);
+        return toResponse(caseRef, entity, safeWorkflow(caseRef.caseId()));
     }
 
     @Override
@@ -216,15 +201,12 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
 
     @Override
     public List<BillingHoldLevelCode> listHoldLevels(BillingHoldType holdType) {
-        // TODO Replace after BA finalizes Hold Type mapping — interim flat set
-        return Arrays.asList(BillingHoldLevelCode.values());
+        return billingLookupService.listHoldLevels(holdType);
     }
 
     @Override
     public List<LookupItem> listAssignees() {
-        // TODO Replace with actual implementation after module integration —
-        // LookupService does not expose billing-access users.
-        return List.of();
+        return billingLookupService.listAssignees();
     }
 
     private BillingDepartmentRequestResponse toResponse(
@@ -243,16 +225,16 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
     }
 
     /**
-     * TODO Replace with actual implementation after module integration —
-     * Resolve {@code businessCaseId} from shared Case Management / platform ID generation
-     * (for example an enriched CaseRef or dedicated ID API). Do not allocate BIL###### here.
+     * Billing extension CHECK requires {@code ^BIL[0-9]{6}$}; shared CM must have allocated that form.
      */
-    private String requireSharedBusinessCaseId() {
-        throw new BillingValidationException(
-                "businessCaseId",
-                "businessCaseId must be provided by shared Case Management / platform ID generation; "
-                        + "Billing does not generate Business Case IDs"
-        );
+    private static String requireBillingDisplayId(String caseNumber) {
+        if (caseNumber == null || !caseNumber.matches("^BIL[0-9]{6}$")) {
+            throw new BillingValidationException(
+                    "businessCaseId",
+                    "shared case_number must be BIL###### for Billing Department Request; got: "
+                            + caseNumber);
+        }
+        return caseNumber;
     }
 
     private void validateReferential(
@@ -264,7 +246,7 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
             Long parentCaseId
     ) {
         if (campaignId != null && !campaignId.isBlank()) {
-            boolean ok = lookupService.listActiveCampaigns().stream()
+            boolean ok = billingLookupService.listCampaigns().stream()
                     .anyMatch(item -> campaignId.equals(item.code()) || campaignId.equals(item.id()));
             if (!ok) {
                 throw new BillingValidationException("campaignId", "campaignId must be an active campaign");
@@ -274,7 +256,7 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
             if (clientId == null) {
                 throw new BillingValidationException("segmentId", "segmentId requires a selected clientId");
             }
-            boolean ok = lookupService.listSegments(String.valueOf(clientId)).stream()
+            boolean ok = billingLookupService.listSegments(String.valueOf(clientId)).stream()
                     .anyMatch(item -> String.valueOf(segmentId).equals(item.id())
                             || String.valueOf(segmentId).equals(item.code()));
             if (!ok) {
@@ -298,7 +280,7 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
         if (productId == null) {
             return;
         }
-        boolean ok = lookupService.listProducts(null).stream()
+        boolean ok = billingLookupService.listProducts(null).stream()
                 .anyMatch(item -> String.valueOf(productId).equals(item.id())
                         || String.valueOf(productId).equals(item.code()));
         if (!ok) {
@@ -323,7 +305,7 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
             return null;
         }
         String key = String.valueOf(segmentId);
-        return lookupService.listSegments(String.valueOf(clientId)).stream()
+        return billingLookupService.listSegments(String.valueOf(clientId)).stream()
                 .filter(item -> key.equals(item.id()) || key.equals(item.code()))
                 .map(LookupItem::label)
                 .findFirst()
@@ -335,7 +317,7 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
             return null;
         }
         String key = String.valueOf(productId);
-        return lookupService.listProducts(null).stream()
+        return billingLookupService.listProducts(null).stream()
                 .filter(item -> key.equals(item.id()) || key.equals(item.code()))
                 .map(LookupItem::label)
                 .findFirst()

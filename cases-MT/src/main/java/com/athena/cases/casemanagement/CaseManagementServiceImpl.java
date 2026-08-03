@@ -6,6 +6,7 @@ import com.athena.cases.common.exception.ResourceNotFoundException;
 import com.athena.cases.identity.entity.CaseTypeEntity;
 import com.athena.cases.identity.entity.TeamEntity;
 import com.athena.cases.identity.repository.CaseTypeRepository;
+import com.athena.cases.idallocation.BusinessCaseIdService;
 import com.athena.cases.notification.NotificationService;
 import com.athena.cases.notification.NotifyTeamCommand;
 import com.athena.cases.security.CurrentUserService;
@@ -32,18 +33,21 @@ public class CaseManagementServiceImpl implements CaseManagementService {
     private final CurrentUserService currentUserService;
     private final WorkflowService workflowService;
     private final NotificationService notificationService;
+    private final BusinessCaseIdService businessCaseIdService;
 
     public CaseManagementServiceImpl(
             CaseRepository caseRepository,
             CaseTypeRepository caseTypeRepository,
             CurrentUserService currentUserService,
             WorkflowService workflowService,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            BusinessCaseIdService businessCaseIdService) {
         this.caseRepository = caseRepository;
         this.caseTypeRepository = caseTypeRepository;
         this.currentUserService = currentUserService;
         this.workflowService = workflowService;
         this.notificationService = notificationService;
+        this.businessCaseIdService = businessCaseIdService;
     }
 
     @Override
@@ -60,7 +64,7 @@ public class CaseManagementServiceImpl implements CaseManagementService {
         Instant now = Instant.now();
         String actor = principal.getUsername();
         CaseEntity entity = new CaseEntity();
-        entity.setCaseNumber(nextCaseNumber());
+        entity.setCaseNumber(resolveDisplayCaseNumber(caseType.getCode()));
         entity.setCaseTypeId(caseType.getId());
         entity.setSubject(caseType.getName());
         entity.setCaseOwner(command.caseOwner() == null || command.caseOwner().isBlank()
@@ -217,6 +221,19 @@ public class CaseManagementServiceImpl implements CaseManagementService {
 
     private String nextCaseNumber() {
         return "CASE-" + (1000 + caseRepository.count() + 1);
+    }
+
+    /**
+     * Prefer shared prefix sequences (BIL###### / DBM###### / …) when registered for the case type.
+     * Falls back to legacy {@code CASE-xxxx} so unregistered types keep working.
+     */
+    private String resolveDisplayCaseNumber(String caseTypeCode) {
+        try {
+            return businessCaseIdService.allocate(caseTypeCode);
+        } catch (ResourceNotFoundException ex) {
+            log.debug("no display-id sequence for caseTypeCode={}; using CASE- fallback", caseTypeCode);
+            return nextCaseNumber();
+        }
     }
 
     private static CaseRef toRef(CaseEntity entity) {

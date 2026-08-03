@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.athena.cases.casemanagement.CaseManagementService;
 import com.athena.cases.casemanagement.CaseRef;
+import com.athena.cases.casemanagement.CreateCaseCommand;
 import com.athena.cases.casemanagement.UpdateCaseHeaderCommand;
 import com.athena.cases.common.constants.PermissionCodes;
 import com.athena.cases.features.billing.dto.BillingDepartmentRequestCreateRequest;
@@ -26,9 +27,9 @@ import com.athena.cases.features.billing.exception.BillingResourceNotFoundExcept
 import com.athena.cases.features.billing.exception.BillingValidationException;
 import com.athena.cases.features.billing.mapper.BillingDepartmentRequestMapper;
 import com.athena.cases.features.billing.repository.BillingDepartmentRequestRepository;
+import com.athena.cases.features.billing.lookup.BillingLookupService;
 import com.athena.cases.lookup.LookupItem;
 import com.athena.cases.lookup.LookupService;
-import com.athena.cases.notification.NotificationService;
 import com.athena.cases.permission.PermissionService;
 import com.athena.cases.security.CurrentUserService;
 import com.athena.cases.workflow.WorkflowRef;
@@ -38,6 +39,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -51,7 +53,7 @@ class BillingDepartmentRequestServiceImplTest {
     @Mock private BillingDepartmentRequestRepository billingRepository;
     @Mock private CaseManagementService caseManagementService;
     @Mock private WorkflowService workflowService;
-    @Mock private NotificationService notificationService;
+    @Mock private BillingLookupService billingLookupService;
     @Mock private LookupService lookupService;
     @Mock private CurrentUserService currentUserService;
     @Mock private PermissionService permissionService;
@@ -65,7 +67,7 @@ class BillingDepartmentRequestServiceImplTest {
                 new BillingDepartmentRequestMapper(),
                 caseManagementService,
                 workflowService,
-                notificationService,
+                billingLookupService,
                 lookupService,
                 currentUserService,
                 permissionService
@@ -73,15 +75,33 @@ class BillingDepartmentRequestServiceImplTest {
     }
 
     @Test
-    void should_throwBillingValidation_when_createBeforeSharedBusinessCaseIdExists() {
+    void should_createBillingExtension_when_sharedCaseAndBusinessCaseIdAllocated() {
+        Long caseId = 42L;
         when(currentUserService.requireUserId()).thenReturn("user-1");
+        when(currentUserService.requireDisplayName()).thenReturn("Ada Lovelace");
+        when(caseManagementService.createCase(any(CreateCaseCommand.class)))
+                .thenReturn(new CaseRef(caseId, "BIL000001", 1L));
+        when(billingRepository.existsByCaseId(caseId)).thenReturn(false);
+        when(billingRepository.save(any(BillingDepartmentRequest.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(workflowService.getByCaseId(caseId))
+                .thenReturn(new WorkflowRef(9L, caseId, "BILLING_OPS_TEAM", "Pending Assignment"));
 
-        assertThatThrownBy(() -> service.create(minimalCreateRequest()))
-                .isInstanceOf(BillingValidationException.class)
-                .hasMessageContaining("businessCaseId");
+        BillingDepartmentRequestResponse response = service.create(minimalCreateRequest());
 
+        assertThat(response.caseId()).isEqualTo(caseId);
+        assertThat(response.caseNumber()).isEqualTo("BIL000001");
+        assertThat(response.businessCaseId()).isEqualTo("BIL000001");
+        assertThat(response.workflowId()).isEqualTo(9L);
+        assertThat(response.workflowStatus()).isEqualTo("Pending Assignment");
+
+        ArgumentCaptor<BillingDepartmentRequest> entityCaptor =
+                ArgumentCaptor.forClass(BillingDepartmentRequest.class);
+        verify(billingRepository).save(entityCaptor.capture());
+        assertThat(entityCaptor.getValue().getCaseId()).isEqualTo(caseId);
+        assertThat(entityCaptor.getValue().getBusinessCaseId()).isEqualTo("BIL000001");
+        verify(workflowService, never()).start(any());
         verify(permissionService).require("user-1", PermissionCodes.CASES_CREATE);
-        verifyNoInteractions(caseManagementService, billingRepository, workflowService, notificationService);
     }
 
     @Test
@@ -95,6 +115,7 @@ class BillingDepartmentRequestServiceImplTest {
                 .hasMessage("denied");
 
         verify(caseManagementService, never()).createCase(any());
+        verifyNoInteractions(billingRepository, workflowService);
     }
 
     @Test
@@ -105,7 +126,7 @@ class BillingDepartmentRequestServiceImplTest {
         BillingDepartmentRequest entity = persistedEntity(caseId, "BIL000001");
         when(billingRepository.findByCaseId(caseId)).thenReturn(Optional.of(entity));
         when(workflowService.getByCaseId(caseId))
-                .thenReturn(new WorkflowRef(9L, caseId, "BILLING_OPS", "PENDING_ASSIGNMENT"));
+                .thenReturn(new WorkflowRef(9L, caseId, "BILLING_OPS_TEAM", "PENDING_ASSIGNMENT"));
 
         BillingDepartmentRequestResponse response = service.getByCaseId(caseId);
 
@@ -174,7 +195,7 @@ class BillingDepartmentRequestServiceImplTest {
         when(caseManagementService.getCase(caseId)).thenReturn(new CaseRef(caseId, "CASE-7", 1L));
         when(billingRepository.findByCaseId(caseId))
                 .thenReturn(Optional.of(persistedEntity(caseId, "BIL000007")));
-        when(lookupService.listActiveCampaigns()).thenReturn(List.of(
+        when(billingLookupService.listCampaigns()).thenReturn(List.of(
                 new LookupItem("1", "CAMP-A", "Campaign A")
         ));
 
@@ -218,6 +239,9 @@ class BillingDepartmentRequestServiceImplTest {
 
     @Test
     void should_returnAllHoldLevelCodes_when_listHoldLevels() {
+        when(billingLookupService.listHoldLevels(BillingHoldType.CLIENT_LEVEL))
+                .thenReturn(List.of(BillingHoldLevelCode.values()));
+
         List<BillingHoldLevelCode> codes = service.listHoldLevels(BillingHoldType.CLIENT_LEVEL);
 
         assertThat(codes).containsExactly(BillingHoldLevelCode.values());
@@ -225,6 +249,8 @@ class BillingDepartmentRequestServiceImplTest {
 
     @Test
     void should_returnEmptyList_when_listAssigneesUntilLookupApiExists() {
+        when(billingLookupService.listAssignees()).thenReturn(List.of());
+
         assertThat(service.listAssignees()).isEmpty();
     }
 

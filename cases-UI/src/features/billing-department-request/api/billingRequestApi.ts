@@ -9,6 +9,7 @@ import type {
 } from '@/features/billing-department-request/types/billingTypes'
 
 const BASE = '/api/v1/billing-department-requests'
+const BILLING_LOOKUPS = '/api/v1/billing/lookups'
 
 export async function createBillingDepartmentRequest(
   payload: BillingDepartmentRequestCreatePayload,
@@ -38,11 +39,11 @@ export async function updateBillingDepartmentRequest(
 }
 
 export async function fetchBillingHoldLevels(): Promise<string[]> {
-  const { data } = await apiClient.get<ApiSuccess<HoldLevelsLookupDto>>(`${BASE}/lookups/hold-levels`)
+  const { data } = await apiClient.get<ApiSuccess<HoldLevelsLookupDto>>(`${BILLING_LOOKUPS}/hold-levels`)
   return data.data?.available ?? []
 }
 
 export async function fetchBillingAssignees(): Promise<BillingAssigneeDto[]> {
-  const { data } = await apiClient.get<ApiSuccess<BillingAssigneeDto[]>>(`${BASE}/lookups/assignees`)
+  const { data } = await apiClient.get<ApiSuccess<BillingAssigneeDto[]>>(`${BILLING_LOOKUPS}/assignees`)
   return data.data ?? []
 }

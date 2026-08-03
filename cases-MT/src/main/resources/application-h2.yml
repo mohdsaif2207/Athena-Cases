@@ -1,7 +1,8 @@
-# TEMPORARY — local-only H2 profile for UI integration while shared Postgres/Flyway is blocked.
-# Activate:  mvnw spring-boot:run -Dspring-boot.run.profiles=h2
-# Revert:    omit the profile (default "dev" uses PostgreSQL from application.properties).
-# Do NOT use this profile in shared/CI environments. Delete this file when Postgres is ready.
+# OPTIONAL local profile — H2 file DB for offline / UI-only work when Postgres is unreachable.
+# Activate explicitly:
+#   mvnw spring-boot:run -Dspring-boot.run.profiles=h2
+# Normal startup (default profile "dev") uses PostgreSQL from application.properties.
+# Do NOT activate this profile in shared/CI environments.
 spring:
   datasource:
     url: ${DB_URL:jdbc:h2:file:./data/cases-mt-h2;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE}

@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.athena.cases.casemanagement.CaseEntity;
+import com.athena.cases.casemanagement.CaseRepository;
 import com.athena.cases.common.exception.ForbiddenException;
 import com.athena.cases.identity.entity.CaseTypeEntity;
 import com.athena.cases.identity.repository.CaseTypeRepository;
@@ -23,6 +25,8 @@ class LookupServiceImplTest {
 
     @Mock
     private CaseTypeRepository caseTypeRepository;
+    @Mock
+    private CaseRepository caseRepository;
     @Mock
     private CurrentUserService currentUserService;
 
@@ -90,6 +94,37 @@ class LookupServiceImplTest {
         assertThatThrownBy(() -> service.listAuthorizedCaseTypes())
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessageContaining("CASES_CREATE");
+    }
+
+    @Test
+    void should_returnRealCaseIds_when_findParentCases() {
+        when(currentUserService.hasPermission("CASES_VIEW")).thenReturn(true);
+        when(currentUserService.requirePrincipal()).thenReturn(principal);
+
+        CaseTypeEntity billing = type(3L, "BILLING_DEPARTMENT_REQUEST", "Billing Department Request");
+        when(caseTypeRepository.findByCodeIn(
+                        List.of("DBM_WORK_ORDER_REQUEST", "EXRT_REQUEST", "BILLING_DEPARTMENT_REQUEST")))
+                .thenReturn(List.of(billing));
+
+        CaseEntity existing = new CaseEntity();
+        existing.setId(11L);
+        existing.setCaseNumber("CASE-1003");
+        existing.setSubject("Billing Department Request");
+        when(caseRepository.findAuthorized(List.of(3L), false)).thenReturn(List.of(existing));
+
+        List<LookupItem> rows = service.findParentCases(null);
+
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).id()).isEqualTo("11");
+        assertThat(rows.get(0).code()).isEqualTo("CASE-1003");
+        assertThat(rows.get(0).label()).contains("CASE-1003");
+    }
+
+    @Test
+    void should_returnCampaignsAndProductsFromMockRegistry() {
+        assertThat(service.listActiveCampaigns()).isNotEmpty();
+        assertThat(service.listProducts(null)).extracting(LookupItem::id).contains("101");
+        assertThat(service.listSegments("CLIENT001")).isNotEmpty();
     }
 
     private static CaseTypeEntity type(Long id, String code, String name) {

@@ -3,13 +3,14 @@ import type { ApiSuccess } from '@/api/types'
 import type { LookupItemDto } from '@/features/billing-department-request/types/billingTypes'
 import {
   BILLING_TEMP_CAMPAIGNS,
-  BILLING_TEMP_PARENT_CASES,
   BILLING_TEMP_PRODUCTS,
   billingTempSegmentsForClient,
 } from '@/features/billing-department-request/constants/billingTemporaryLookups'
 
+const BILLING_LOOKUPS = '/api/v1/billing/lookups'
+
 /**
- * Clients — real shared lookup endpoint.
+ * Clients — shared lookup (not Billing-owned).
  */
 export async function fetchActiveClients(): Promise<LookupItemDto[]> {
   try {
@@ -21,56 +22,56 @@ export async function fetchActiveClients(): Promise<LookupItemDto[]> {
 }
 
 /**
- * Campaigns — try REST; fall back to Billing temporary mock (no LookupController route yet).
+ * Campaigns — Billing lookup module.
  */
 export async function fetchCampaigns(): Promise<LookupItemDto[]> {
   try {
-    const { data } = await apiClient.get<ApiSuccess<LookupItemDto[]>>('/api/v1/lookups/campaigns')
+    const { data } = await apiClient.get<ApiSuccess<LookupItemDto[]>>(`${BILLING_LOOKUPS}/campaigns`)
     if (Array.isArray(data.data) && data.data.length) return data.data
   } catch {
-    /* endpoint missing — use temporary Billing mock */
+    /* use temporary Billing mock */
   }
   return BILLING_TEMP_CAMPAIGNS
 }
 
 /**
- * Products / PCP — try REST; fall back to Billing temporary mock.
+ * Products / PCP — Billing lookup module.
  */
 export async function fetchProducts(): Promise<LookupItemDto[]> {
   try {
-    const { data } = await apiClient.get<ApiSuccess<LookupItemDto[]>>('/api/v1/lookups/products')
+    const { data } = await apiClient.get<ApiSuccess<LookupItemDto[]>>(`${BILLING_LOOKUPS}/products`)
     if (Array.isArray(data.data) && data.data.length) return data.data
   } catch {
-    /* endpoint missing — use temporary Billing mock */
+    /* use temporary Billing mock */
   }
   return BILLING_TEMP_PRODUCTS
 }
 
 /**
- * Parent cases — try REST; fall back to Billing temporary mock.
+ * Parent cases — Billing lookup module (real cases.id).
  */
 export async function fetchParentCases(): Promise<LookupItemDto[]> {
   try {
-    const { data } = await apiClient.get<ApiSuccess<LookupItemDto[]>>('/api/v1/lookups/parent-cases')
-    if (Array.isArray(data.data) && data.data.length) return data.data
+    const { data } = await apiClient.get<ApiSuccess<LookupItemDto[]>>(`${BILLING_LOOKUPS}/parent-cases`)
+    if (Array.isArray(data.data)) return data.data
   } catch {
-    /* endpoint missing — use temporary Billing mock */
+    /* do not offer fake parent ids that fail Save */
   }
-  return BILLING_TEMP_PARENT_CASES
+  return []
 }
 
 /**
- * Segments for client — try REST; fall back to Billing temporary mock.
+ * Segments for client — Billing lookup module.
  */
 export async function fetchSegmentsForClient(clientId: string): Promise<LookupItemDto[]> {
   if (!clientId.trim()) return []
   try {
-    const { data } = await apiClient.get<ApiSuccess<LookupItemDto[]>>('/api/v1/lookups/segments', {
+    const { data } = await apiClient.get<ApiSuccess<LookupItemDto[]>>(`${BILLING_LOOKUPS}/segments`, {
       params: { clientId },
     })
     if (Array.isArray(data.data)) return data.data
   } catch {
-    /* endpoint missing — use temporary Billing mock */
+    /* use temporary Billing mock */
   }
   return billingTempSegmentsForClient(clientId)
 }

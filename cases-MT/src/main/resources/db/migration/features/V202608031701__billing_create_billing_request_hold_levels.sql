@@ -3,8 +3,12 @@
 -- feature: Billing Department Request
 -- lld: Billing_Department_Request_LLD.md §13.3
 --
+-- RE-VERSIONED: originally V202607311911 — never applied on shared Postgres
+-- (Flyway head already past that version). New ID is after
+-- V202608031700 (billing_department_requests).
+--
 -- DEPENDENCY:
---   Requires billing_department_requests (Billing migration V202607311400).
+--   Requires billing_department_requests (Billing migration V202608031700).
 --
 -- Hold Level Available options may later vary by Billing Hold Type (OPEN-01).
 -- Stored codes remain within the CHECK domain below (interim flat set).

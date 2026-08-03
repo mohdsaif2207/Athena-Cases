@@ -5,7 +5,7 @@ package com.athena.cases.features.billing;
  */
 public final class BillingConstants {
 
-    public static final String RECEIVER_TEAM_BILLING_OPS = "BILLING_OPS";
+    public static final String RECEIVER_TEAM_BILLING_OPS = "BILLING_OPS_TEAM";
 
     public static final String WORKFLOW_STATUS_PENDING_ASSIGNMENT = "PENDING_ASSIGNMENT";
 

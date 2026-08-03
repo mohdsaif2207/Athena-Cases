@@ -55,9 +55,8 @@ public final class LookupMockData {
             "CLIENT003", List.of(
                     new LookupItem("205", "SEG205", "FNCU Member Segment")));
 
-    // TEMPORARY MOCK DATA
-    // Replace when the corresponding backend lookup API is implemented.
-    // id is numeric for optional Long parentCaseId wiring; code mirrors a Business Case style id.
+    // TEMPORARY MOCK DATA — kept for reference / tests; findParentCases reads CaseRepository.
+    // Replace when platform parent-case search API exists.
     public static final List<LookupItem> PARENT_CASES = List.of(
             new LookupItem("9001", "BIL9001", "BIL9001 — Sample Parent Billing Case"),
             new LookupItem("9002", "BIL9002", "BIL9002 — Sample Parent Research Case"),

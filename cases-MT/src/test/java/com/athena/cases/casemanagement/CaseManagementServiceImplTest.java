@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.athena.cases.common.exception.ForbiddenException;
 import com.athena.cases.identity.entity.CaseTypeEntity;
 import com.athena.cases.identity.repository.CaseTypeRepository;
+import com.athena.cases.idallocation.BusinessCaseIdService;
 import com.athena.cases.security.CurrentUserService;
 import com.athena.cases.security.UserPrincipal;
 import java.time.Instant;
@@ -36,6 +37,8 @@ class CaseManagementServiceImplTest {
     private WorkflowService workflowService;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private BusinessCaseIdService businessCaseIdService;
 
     @InjectMocks
     private CaseManagementServiceImpl service;

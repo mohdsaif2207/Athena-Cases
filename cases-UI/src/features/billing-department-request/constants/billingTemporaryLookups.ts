@@ -1,9 +1,8 @@
 /**
- * TEMPORARY MOCK DATA — Billing feature only.
- * Replace when the corresponding backend lookup API is implemented
- * (GET /api/v1/lookups/campaigns|segments|products|parent-cases).
+ * TEMPORARY MOCK DATA — Billing UI fallback only.
+ * Prefer GET /api/v1/billing/lookups/* from BillingLookupController.
  *
- * Values mirror backend LookupMockData so referential validation can succeed.
+ * // TEMP: Replace with shared lookup API when available.
  */
 import type { LookupItemDto } from '@/features/billing-department-request/types/billingTypes'
 
@@ -21,13 +20,7 @@ export const BILLING_TEMP_PRODUCTS: LookupItemDto[] = [
   { id: '105', code: 'PCP002', label: 'Riverside Primary Care' },
 ]
 
-export const BILLING_TEMP_PARENT_CASES: LookupItemDto[] = [
-  { id: '9001', code: 'BIL9001', label: 'BIL9001 — Sample Parent Billing Case' },
-  { id: '9002', code: 'BIL9002', label: 'BIL9002 — Sample Parent Research Case' },
-  { id: '9003', code: 'DBM9003', label: 'DBM9003 — Sample Parent DBM Case' },
-]
-
-/** Keyed by client id/code (matches LookupMockData.CLIENTS). */
+/** Keyed by client id/code (matches shared clients). */
 export const BILLING_TEMP_SEGMENTS_BY_CLIENT: Record<string, LookupItemDto[]> = {
   CLIENT001: [
     { id: '201', code: 'SEG201', label: 'ABC Retail Segment' },
