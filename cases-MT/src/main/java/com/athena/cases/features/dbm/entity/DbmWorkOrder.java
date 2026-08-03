@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-import com.athena.cases.casemanagement.entity.Case;
+import com.athena.cases.casemanagement.CaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,7 +18,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 /**
- * DBM-specific detail row mapped to {@code dbm_work_order} (1:1 with {@link Case}).
+ * DBM-specific detail row mapped to {@code dbm_work_order} (1:1 with {@link CaseEntity}).
  */
 @Entity
 @Table(name = "dbm_work_order")
@@ -31,7 +31,7 @@ public class DbmWorkOrder {
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @MapsId
     @JoinColumn(name = "case_id")
-    private Case caseEntity;
+    private CaseEntity caseEntity;
 
     @Column(name = "vendor", nullable = false, length = 32)
     private String vendor;
@@ -119,11 +119,11 @@ public class DbmWorkOrder {
         this.caseId = caseId;
     }
 
-    public Case getCaseEntity() {
+    public CaseEntity getCaseEntity() {
         return caseEntity;
     }
 
-    public void setCaseEntity(Case caseEntity) {
+    public void setCaseEntity(CaseEntity caseEntity) {
         this.caseEntity = caseEntity;
     }
 

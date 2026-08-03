@@ -13,9 +13,9 @@ public final class LookupMockData {
             item("CLIENT003", "First National Credit Union"));
 
     public static final List<EventIdLookupItem> EVENT_IDS = List.of(
-            new EventIdLookupItem("EVT1001", "Summer Campaign", "July"),
-            new EventIdLookupItem("EVT1002", "Winter Campaign", "December"),
-            new EventIdLookupItem("EVT1003", "Fall Acquisition", "October"));
+            new EventIdLookupItem("EVT1001", "Summer Campaign", "2025-07"),
+            new EventIdLookupItem("EVT1002", "Winter Campaign", "2025-12"),
+            new EventIdLookupItem("EVT1003", "Fall Acquisition", "2025-10"));
 
     public static final List<LookupItem> SPOKEN_KEYS = List.of(
             item("SPK001", "English"),

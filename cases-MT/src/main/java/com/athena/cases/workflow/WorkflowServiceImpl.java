@@ -142,7 +142,12 @@ public class WorkflowServiceImpl implements WorkflowService {
     }
 
     private static WorkflowRef toRef(WorkflowEntity entity, String teamCode) {
-        return new WorkflowRef(entity.getId(), entity.getCaseId(), teamCode, entity.getStatus());
+        return new WorkflowRef(
+                entity.getId(),
+                entity.getCaseId(),
+                entity.getMessageKey(),
+                teamCode,
+                entity.getStatus());
     }
 
     private static String nullToEmpty(String value) {

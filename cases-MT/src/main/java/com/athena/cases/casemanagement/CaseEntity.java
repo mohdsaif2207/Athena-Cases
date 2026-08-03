@@ -52,7 +52,7 @@ public class CaseEntity extends AuditableEntity {
     @Column(name = "event_id", length = 64)
     private String eventId;
 
-    @Column(name = "mail_month", length = 7)
+    @Column(name = "mail_month", length = 32)
     private String mailMonth;
 
     @Column(name = "requested_due_date")
