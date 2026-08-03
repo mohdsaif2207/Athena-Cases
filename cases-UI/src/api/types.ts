@@ -4,6 +4,11 @@ export interface AuthenticatedUser {
   displayName: string
   roles: string[]
   permissions: string[]
+  groups?: string[]
+  teams?: string[]
+  caseTypes?: string[]
+  initiatingTeams?: string[]
+  receivingTeams?: string[]
 }
 
 export interface LoginResponseData {
