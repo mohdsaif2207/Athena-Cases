@@ -17,4 +17,6 @@ public interface LookupService {
     List<LookupItem> listProducts(String query);
 
     List<LookupItem> findParentCases(String query);
+
+    List<LookupItem> listAuthorizedCaseTypes();
 }

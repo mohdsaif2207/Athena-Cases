@@ -13,7 +13,7 @@ CREATE TABLE billing_request_hold_levels (
     id                      BIGSERIAL       NOT NULL,
     billing_request_id      BIGINT          NOT NULL,
     hold_level_code         VARCHAR(32)     NOT NULL,
-    created_at              TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    created_at              TIMESTAMP WITH TIME ZONE     NOT NULL DEFAULT NOW(),
 
     CONSTRAINT pk_billing_request_hold_levels
         PRIMARY KEY (id),
