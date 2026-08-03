@@ -16,8 +16,11 @@ interface WorkflowQueueItemDto {
   owner: string
   priority: string
   receivedAt: string
+  updatedAt?: string
   action: string
   logs: string
+  createdBy?: string
+  receivingTeamCode?: string
 }
 
 export async function fetchWorkflows(): Promise<WorkflowRecord[]> {
@@ -35,8 +38,11 @@ export async function fetchWorkflows(): Promise<WorkflowRecord[]> {
     owner: dto.owner ?? '',
     priority: dto.priority,
     receivedDate: formatReceived(dto.receivedAt),
+    updatedDate: formatReceived(dto.updatedAt ?? dto.receivedAt),
     action: dto.action ?? '',
     logs: dto.logs ?? '',
+    createdBy: dto.createdBy ?? '',
+    receivingTeamCode: dto.receivingTeamCode ?? '',
   }))
 }
 
@@ -44,5 +50,9 @@ function formatReceived(iso: string): string {
   if (!iso) return ''
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ''
-  return formatAppDate(date)
+  const d = formatAppDate(date)
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${d} ${hh}:${mm}:${ss}`
 }

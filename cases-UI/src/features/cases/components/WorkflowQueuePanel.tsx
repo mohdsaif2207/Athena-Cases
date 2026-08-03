@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { fetchWorkflows } from '@/features/cases/api/workflowApi'
 import { CasesPagination } from '@/features/cases/components/CasesPagination'
+import { QueueEditButton, QueueViewButton } from '@/features/cases/components/QueueActionButtons'
+import { QueueDetailModal } from '@/features/cases/components/QueueDetailModal'
 import { exportWorkflowsToExcel } from '@/features/cases/utils/exportQueueExcel'
 import { paginate } from '@/features/cases/utils/filterCases'
-import type { WorkflowRecord } from '@/features/cases/types'
+import { canEditQueueRecord } from '@/features/cases/utils/queueEditAccess'
+import type { QueueDetailFields, WorkflowRecord } from '@/features/cases/types'
 
 const PAGE_SIZE = 10
 
@@ -29,12 +33,16 @@ interface WorkflowQueuePanelProps {
 }
 
 export function WorkflowQueuePanel({ onToast }: WorkflowQueuePanelProps) {
+  const { user } = useAuth()
   const [rows, setRows] = useState<WorkflowRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS })
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailTitle, setDetailTitle] = useState('View Workflow Details')
+  const [detailFields, setDetailFields] = useState<QueueDetailFields | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -61,9 +69,10 @@ export function WorkflowQueuePanel({ onToast }: WorkflowQueuePanelProps) {
   const filtered = useMemo(
     () =>
       rows.filter((row) =>
-        (Object.keys(filters) as FilterKey[]).every((key) =>
-          matches(String(row[key as keyof WorkflowRecord] ?? ''), filters[key]),
-        ),
+        (Object.keys(filters) as FilterKey[]).every((key) => {
+          if (key === 'logs') return true
+          return matches(String(row[key as keyof WorkflowRecord] ?? ''), filters[key])
+        }),
       ),
     [rows, filters],
   )
@@ -79,6 +88,24 @@ export function WorkflowQueuePanel({ onToast }: WorkflowQueuePanelProps) {
   function setFilter(key: FilterKey, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }))
     setPage(0)
+  }
+
+  function openDetail(row: WorkflowRecord, mode: 'view' | 'edit') {
+    setDetailTitle(mode === 'view' ? 'View Workflow Details' : 'Edit Workflow Details')
+    setDetailFields({
+      messageId: row.messageId,
+      messageName: row.messageName,
+      messageKey: row.messageKey,
+      message: row.logs || row.messageObject || row.messageName,
+      priority: row.priority,
+      owner: row.owner,
+      receivedDate: row.receivedDate,
+      updatedDate: row.updatedDate,
+      senderSystem: 'ATHENA',
+      senderUserId: row.createdBy,
+      senderUserGroup: '',
+    })
+    setDetailOpen(true)
   }
 
   return (
@@ -159,6 +186,7 @@ export function WorkflowQueuePanel({ onToast }: WorkflowQueuePanelProps) {
                           onChange={(e) => setFilter(key, e.target.value)}
                           aria-label={`Filter ${key}`}
                           data-testid={`workflow-filter-${key}`}
+                          disabled={key === 'logs'}
                         />
                       </th>
                     ))}
@@ -189,7 +217,20 @@ export function WorkflowQueuePanel({ onToast }: WorkflowQueuePanelProps) {
                         <td>{row.priority}</td>
                         <td>{row.receivedDate}</td>
                         <td>{row.action}</td>
-                        <td>{row.logs}</td>
+                        <td>
+                          <span className="queue-actions" data-testid={`workflow-logs-${row.workflowId}`}>
+                            <QueueViewButton
+                              testId={`workflow-view-${row.workflowId}`}
+                              onClick={() => openDetail(row, 'view')}
+                            />
+                            {canEditQueueRecord(user, row.createdBy, row.receivingTeamCode) ? (
+                              <QueueEditButton
+                                testId={`workflow-edit-${row.workflowId}`}
+                                onClick={() => openDetail(row, 'edit')}
+                              />
+                            ) : null}
+                          </span>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -210,6 +251,16 @@ export function WorkflowQueuePanel({ onToast }: WorkflowQueuePanelProps) {
           </>
         ) : null}
       </div>
+
+      <QueueDetailModal
+        open={detailOpen}
+        title={detailTitle}
+        fields={detailFields}
+        onClose={() => {
+          setDetailOpen(false)
+          setDetailFields(null)
+        }}
+      />
     </section>
   )
 }

@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { fetchNotifications } from '@/features/cases/api/notificationApi'
 import { CasesPagination } from '@/features/cases/components/CasesPagination'
+import { QueueEditButton, QueueViewButton } from '@/features/cases/components/QueueActionButtons'
+import { QueueDetailModal } from '@/features/cases/components/QueueDetailModal'
 import { exportNotificationsToExcel } from '@/features/cases/utils/exportQueueExcel'
 import { paginate } from '@/features/cases/utils/filterCases'
-import type { NotificationRecord } from '@/features/cases/types'
+import { canEditQueueRecord } from '@/features/cases/utils/queueEditAccess'
+import type { NotificationRecord, QueueDetailFields } from '@/features/cases/types'
 
 const PAGE_SIZE = 10
 
@@ -25,12 +29,16 @@ interface NotificationQueuePanelProps {
 }
 
 export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps) {
+  const { user } = useAuth()
   const [rows, setRows] = useState<NotificationRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS })
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailTitle, setDetailTitle] = useState('View Notification Details')
+  const [detailFields, setDetailFields] = useState<QueueDetailFields | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -57,9 +65,10 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
   const filtered = useMemo(
     () =>
       rows.filter((row) =>
-        (Object.keys(filters) as FilterKey[]).every((key) =>
-          matches(String(row[key as keyof NotificationRecord] ?? ''), filters[key]),
-        ),
+        (Object.keys(filters) as FilterKey[]).every((key) => {
+          if (key === 'details') return true
+          return matches(String(row[key as keyof NotificationRecord] ?? ''), filters[key])
+        }),
       ),
     [rows, filters],
   )
@@ -75,6 +84,24 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
   function setFilter(key: FilterKey, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }))
     setPage(0)
+  }
+
+  function openDetail(row: NotificationRecord, mode: 'view' | 'edit') {
+    setDetailTitle(mode === 'view' ? 'View Notification Details' : 'Edit Notification Details')
+    setDetailFields({
+      messageId: row.messageId,
+      messageName: row.messageName,
+      messageKey: row.messageKey,
+      message: row.message,
+      priority: row.priority,
+      owner: row.owner,
+      receivedDate: row.receivedDate,
+      updatedDate: row.updatedDate,
+      senderSystem: 'ATHENA',
+      senderUserId: row.createdBy,
+      senderUserGroup: '',
+    })
+    setDetailOpen(true)
   }
 
   return (
@@ -151,6 +178,7 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
                           onChange={(e) => setFilter(key, e.target.value)}
                           aria-label={`Filter ${key}`}
                           data-testid={`notification-filter-${key}`}
+                          disabled={key === 'details'}
                         />
                       </th>
                     ))}
@@ -177,7 +205,20 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
                         <td>{row.messageObject}</td>
                         <td>{row.message}</td>
                         <td>{row.receivedDate}</td>
-                        <td>{row.details}</td>
+                        <td>
+                          <span className="queue-actions" data-testid={`notification-details-${row.notificationId}`}>
+                            <QueueViewButton
+                              testId={`notification-view-${row.notificationId}`}
+                              onClick={() => openDetail(row, 'view')}
+                            />
+                            {canEditQueueRecord(user, row.createdBy, row.receivingTeamCode) ? (
+                              <QueueEditButton
+                                testId={`notification-edit-${row.notificationId}`}
+                                onClick={() => openDetail(row, 'edit')}
+                              />
+                            ) : null}
+                          </span>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -198,6 +239,16 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
           </>
         ) : null}
       </div>
+
+      <QueueDetailModal
+        open={detailOpen}
+        title={detailTitle}
+        fields={detailFields}
+        onClose={() => {
+          setDetailOpen(false)
+          setDetailFields(null)
+        }}
+      />
     </section>
   )
 }

@@ -13,7 +13,12 @@ interface NotificationQueueItemDto {
   messageObject: string
   message: string
   receivedAt: string
+  updatedAt?: string
   details: string
+  createdBy?: string
+  priority?: string
+  owner?: string
+  receivingTeamCode?: string
 }
 
 export async function fetchNotifications(): Promise<NotificationRecord[]> {
@@ -28,7 +33,12 @@ export async function fetchNotifications(): Promise<NotificationRecord[]> {
     messageObject: dto.messageObject ?? '',
     message: dto.message,
     receivedDate: formatReceived(dto.receivedAt),
+    updatedDate: formatReceived(dto.updatedAt ?? dto.receivedAt),
     details: dto.details ?? '',
+    createdBy: dto.createdBy ?? '',
+    priority: dto.priority ?? '',
+    owner: dto.owner ?? '',
+    receivingTeamCode: dto.receivingTeamCode ?? '',
   }))
 }
 
@@ -36,5 +46,9 @@ function formatReceived(iso: string): string {
   if (!iso) return ''
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ''
-  return formatAppDate(date)
+  const d = formatAppDate(date)
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${d} ${hh}:${mm}:${ss}`
 }

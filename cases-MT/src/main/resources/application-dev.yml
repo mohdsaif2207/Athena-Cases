@@ -1,17 +1,19 @@
-# Dev profile — PostgreSQL (working ExRT + IAM). JWT/admin seed from platform branch.
+# Dev profile — PostgreSQL (ExRT + IAM). Credentials from Athena-Cases/.env only.
+# Schema follows DB_URL (search_path / currentSchema). Do NOT hardcode cases_mt here:
+# forcing a schema that differs from .env makes login read a different users table
+# than the one you inspect in the DB client (merge regression).
 spring:
   datasource:
-    # Full JDBC URL required. From Athena-Cases/.env (local) or Docker Compose env.
     url: ${DB_URL:?Set DB_URL in Athena-Cases/.env}
     username: ${DB_USER:?Set DB_USER in Athena-Cases/.env}
     password: ${DB_PASSWORD:?Set DB_PASSWORD in Athena-Cases/.env}
     driver-class-name: org.postgresql.Driver
-
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-    show-sql: false
 
 app:
   cors:

@@ -27,7 +27,7 @@ public class CaseTypeEntity extends AuditableEntity {
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "case_type_initiating_teams",
             joinColumns = @JoinColumn(name = "case_type_id"),
@@ -35,7 +35,7 @@ public class CaseTypeEntity extends AuditableEntity {
     )
     private Set<TeamEntity> initiatingTeams = new HashSet<>();
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "case_type_receiving_teams",
             joinColumns = @JoinColumn(name = "case_type_id"),

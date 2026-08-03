@@ -18,7 +18,10 @@ public record WorkflowQueueItem(
         String owner,
         String priority,
         Instant receivedAt,
+        Instant updatedAt,
         String action,
-        String logs
+        String logs,
+        String createdBy,
+        String receivingTeamCode
 ) {
 }

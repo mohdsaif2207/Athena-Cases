@@ -114,6 +114,9 @@ public class WorkflowServiceImpl implements WorkflowService {
     }
 
     private WorkflowQueueItem toQueueItem(WorkflowEntity w) {
+        String teamCode = teamRepository.findById(w.getReceivingTeamId())
+                .map(TeamEntity::getCode)
+                .orElse("");
         return new WorkflowQueueItem(
                 w.getId(),
                 "WF-" + w.getId(),
@@ -127,8 +130,11 @@ public class WorkflowServiceImpl implements WorkflowService {
                 nullToEmpty(w.getOwnerName()),
                 w.getPriority(),
                 w.getReceivedAt(),
+                w.getUpdatedAt(),
                 nullToEmpty(w.getActionLabel()),
-                nullToEmpty(w.getLogs()));
+                nullToEmpty(w.getLogs()),
+                nullToEmpty(w.getCreatedBy()),
+                teamCode);
     }
 
     private void assertReceivingTeamAccess(Long receivingTeamId) {

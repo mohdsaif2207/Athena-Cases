@@ -30,10 +30,12 @@ public class CasesViewerSeedRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(CasesViewerSeedRunner.class);
 
+    // updatePasswordOnSync=false: never overwrite existing BCrypt hashes on restart
+    // (same contract as DefaultAdminSeedRunner). First-time create still seeds the password.
     private static final List<ModuleUserSeed> USERS = List.of(
-            new ModuleUserSeed("charan", "MTcharan", "FranklinCharan@123", true, "BILLING_CASE_USER", "BILLING_CASE_USERS"),
-            new ModuleUserSeed("saif", "MTsaif", "FranklinSaif@123", true, "DBM_CASE_USER", "DBM_CASE_USERS"),
-            new ModuleUserSeed("umar", "MTumar", "FranklinUmar@123", true, "EXRT_CASE_USER", "EXRT_CASE_USERS"));
+            new ModuleUserSeed("charan", "MTcharan", "FranklinCharan@123", false, "BILLING_CASE_USER", "BILLING_CASE_USERS"),
+            new ModuleUserSeed("saif", "MTsaif", "FranklinSaif@123", false, "DBM_CASE_USER", "DBM_CASE_USERS"),
+            new ModuleUserSeed("umar", "MTumar", "FranklinUmar@123", false, "EXRT_CASE_USER", "EXRT_CASE_USERS"));
 
     private final AdminSeedProperties properties;
     private final UserRepository userRepository;
