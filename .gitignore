@@ -26,6 +26,7 @@ logs/
 
 # Java / Maven (cases-MT)
 cases-MT/target/
+cases-MT/data/
 cases-MT/.mvn/wrapper/maven-wrapper.jar
 !**/.mvn/wrapper/maven-wrapper.properties
 *.class
