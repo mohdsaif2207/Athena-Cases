@@ -12,13 +12,13 @@ import jakarta.persistence.Version;
 @MappedSuperclass
 public abstract class AuditableEntity extends BaseEntity {
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    @Column(name = "created_by", nullable = false, length = 64)
+    @Column(name = "created_by", nullable = false, length = 64, updatable = false)
     private String createdBy;
 
     @Column(name = "updated_by", nullable = false, length = 64)
