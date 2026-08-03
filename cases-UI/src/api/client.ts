@@ -1,12 +1,17 @@
 import axios from 'axios'
 import { clearSession, getAccessToken } from '@/lib/auth-storage'
 
-const baseURL = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:8090'
+/**
+ * Shared HTTP client. Empty baseURL uses Vite's `/api` proxy in dev (→ :8090).
+ * Override with `VITE_API_BASE_URL` when the UI is served against a remote API.
+ */
+const baseURL = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
 
 export const apiClient = axios.create({
   baseURL,
   timeout: 15_000,
   headers: {
+    Accept: 'application/json',
     'Content-Type': 'application/json',
   },
 })

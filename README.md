@@ -55,10 +55,15 @@ Maven Wrapper is included under `cases-MT` (`mvnw` / `mvnw.cmd`).
 
 ## Backend (`cases-MT`)
 
+```powershell
+# Local (loads cases-MT/.env, then starts Spring Boot)
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\local\run-backend.ps1
+```
+
+One-time: `copy cases-MT\.env.example cases-MT\.env` and set `DB_URL`, `DB_USER`, `DB_PASSWORD`.
+
 ```bash
 cd cases-MT
-.\mvnw.cmd spring-boot:run     # Windows
-./mvnw spring-boot:run         # macOS / Linux
 .\mvnw.cmd clean verify
 ```
 

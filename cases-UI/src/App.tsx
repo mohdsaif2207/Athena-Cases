@@ -4,7 +4,7 @@ import { AdminDashboardPage } from '@/features/admin/pages/AdminDashboardPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { BillingCaseCreatePage } from '@/features/cases/pages/BillingCaseCreatePage'
 import { CasesDashboardPlaceholder } from '@/features/cases/pages/CasesDashboardPlaceholder'
-import { DbmCaseCreatePage } from '@/features/cases/pages/DbmCaseCreatePage'
+import { DbmWorkOrderCreatePage } from '@/features/dbm-work-order-request'
 import { ExrtRequestCreatePage } from '@/features/exrt-request'
 import { EXRT_ROUTE } from '@/features/exrt-request/theme/exrtTheme'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
@@ -40,15 +40,22 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/user-management" element={<Navigate to="/utilities" replace />} />
+          <Route
+            path="/user-management"
+            element={<Navigate to="/utilities" replace />}
+          />
           <Route path="/admin" element={<Navigate to="/utilities" replace />} />
           <Route
             path="/cases/new/dbm"
             element={
               <ProtectedRoute>
-                <DbmCaseCreatePage />
+                <DbmWorkOrderCreatePage />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/cases/new/dbm-work-order"
+            element={<Navigate to="/cases/new/dbm" replace />}
           />
           {/* Real ExRT create form — keep both path aliases */}
           <Route

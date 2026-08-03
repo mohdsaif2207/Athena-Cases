@@ -1,17 +1,23 @@
 package com.athena.cases.lookup;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.athena.cases.common.constants.PermissionCodes;
 import com.athena.cases.common.exception.ForbiddenException;
 import com.athena.cases.identity.entity.CaseTypeEntity;
 import com.athena.cases.identity.repository.CaseTypeRepository;
 import com.athena.cases.security.CurrentUserService;
 import com.athena.cases.security.UserPrincipal;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Combined lookup service: RBAC case-types + in-memory mock masters for DBM / ExRT dropdowns.
+ */
 @Service
 public class LookupServiceImpl implements LookupService {
 
@@ -37,7 +43,9 @@ public class LookupServiceImpl implements LookupService {
     private final CaseTypeRepository caseTypeRepository;
     private final CurrentUserService currentUserService;
 
-    public LookupServiceImpl(CaseTypeRepository caseTypeRepository, CurrentUserService currentUserService) {
+    public LookupServiceImpl(
+            CaseTypeRepository caseTypeRepository,
+            CurrentUserService currentUserService) {
         this.caseTypeRepository = caseTypeRepository;
         this.currentUserService = currentUserService;
     }
@@ -49,12 +57,17 @@ public class LookupServiceImpl implements LookupService {
 
     @Override
     public List<LookupItem> listActiveCampaigns() {
-        return List.of();
+        return LookupMockData.CAMPAIGNS;
     }
 
     @Override
     public List<LookupItem> listSegments(String clientId) {
-        return List.of();
+        if (clientId == null || clientId.isBlank()) {
+            return List.of();
+        }
+        return List.of(
+                new LookupItem(clientId + "-SEG01", clientId + "-SEG01", "Retail Segment"),
+                new LookupItem(clientId + "-SEG02", clientId + "-SEG02", "Commercial Segment"));
     }
 
     @Override
@@ -64,19 +77,11 @@ public class LookupServiceImpl implements LookupService {
 
     @Override
     public List<LookupItem> findParentCases(String query) {
-        return List.of();
-    }
-
-    private static List<LookupItem> filterByQuery(List<LookupItem> items, String query) {
         if (query == null || query.isBlank()) {
-            return items;
+            return List.of();
         }
-        String q = query.trim().toLowerCase();
-        return items.stream()
-                .filter(item -> item.code().toLowerCase().contains(q)
-                        || item.label().toLowerCase().contains(q)
-                        || item.id().toLowerCase().contains(q))
-                .toList();
+        String normalized = query.trim().toUpperCase(Locale.ROOT);
+        return List.of(new LookupItem(normalized, normalized, "Parent case " + normalized));
     }
 
     @Override
@@ -100,5 +105,36 @@ public class LookupServiceImpl implements LookupService {
                         .thenComparing(CaseTypeEntity::getName))
                 .map(ct -> new LookupItem(String.valueOf(ct.getId()), ct.getCode(), ct.getName()))
                 .toList();
+    }
+
+    @Override
+    public List<LookupItem> listActiveClients() {
+        return LookupMockData.CLIENTS;
+    }
+
+    @Override
+    public List<EventIdLookupItem> listActiveEventIds() {
+        return LookupMockData.EVENT_IDS;
+    }
+
+    @Override
+    public List<LookupItem> listActiveSpokenKeys() {
+        return LookupMockData.SPOKEN_KEYS;
+    }
+
+    private static List<LookupItem> filterByQuery(List<LookupItem> source, String query) {
+        if (query == null || query.isBlank()) {
+            return source;
+        }
+        String needle = query.trim().toLowerCase(Locale.ROOT);
+        return source.stream()
+                .filter(item -> containsIgnoreCase(item.code(), needle)
+                        || containsIgnoreCase(item.label(), needle)
+                        || containsIgnoreCase(item.id(), needle))
+                .toList();
+    }
+
+    private static boolean containsIgnoreCase(String value, String needle) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(needle);
     }
 }

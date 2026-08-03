@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
 
-// Proxy + axios base URL must match cases-MT (8090). Never default to 8080.
+// Proxy + cases-MT default port is 8090 (see application.yml). Never default to 8080.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiTarget = env.VITE_API_BASE_URL?.trim() || 'http://localhost:8090'

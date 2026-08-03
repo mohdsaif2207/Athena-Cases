@@ -1,0 +1,344 @@
+/* Athena-inspired styling for DBM Work Order Request Create */
+
+.dbm-page {
+  --dbm-navy: #0b1f4a;
+  --dbm-navy-mid: #163468;
+  --dbm-input-bg: #eef0f8;
+  --dbm-page-bg: #f4f5f9;
+  --dbm-border: #d5d8e4;
+  --dbm-text: #2b2f3a;
+  --dbm-muted: #5c6478;
+  --dbm-coral: #e05b4d;
+  --dbm-coral-hover: #c94c40;
+  --dbm-white: #ffffff;
+  --dbm-font: 'Segoe UI', Roboto, Arial, sans-serif;
+
+  min-height: 100vh;
+  background: var(--dbm-page-bg);
+  color: var(--dbm-text);
+  font-family: var(--dbm-font);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.dbm-page-title {
+  background: var(--dbm-navy);
+  color: var(--dbm-white);
+  font-size: 18px;
+  font-weight: 700;
+  padding: 12px 20px;
+}
+
+.dbm-readonly-label {
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--dbm-border);
+  background: #e4e6ef;
+  color: var(--dbm-muted);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.dbm-form {
+  max-width: 1180px;
+  margin: 16px auto 32px;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.dbm-lookup-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--dbm-border);
+  border-radius: 2px;
+  background: var(--dbm-white);
+  color: var(--dbm-text);
+}
+
+.dbm-lookup-loading {
+  color: var(--dbm-muted);
+}
+
+.dbm-lookup-error {
+  border-color: #e0b4af;
+  background: #fdf4f3;
+  color: var(--dbm-coral);
+}
+
+.dbm-save-success {
+  border-color: #a8c5a8;
+  background: #f1f8f1;
+  color: #1f5c2e;
+}
+
+.dbm-field-invalid input,
+.dbm-field-invalid select,
+.dbm-field-invalid textarea {
+  border-color: var(--dbm-coral);
+  background: #fdf4f3;
+}
+
+.dbm-field-error {
+  color: var(--dbm-coral);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.dbm-field-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dbm-muted);
+  line-height: 1.35;
+}
+
+.dbm-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.dbm-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(11, 31, 74, 0.45);
+}
+
+.dbm-confirm-dialog {
+  width: min(420px, 100%);
+  background: var(--dbm-white);
+  border: 1px solid var(--dbm-border);
+  box-shadow: 0 8px 24px rgba(11, 31, 74, 0.18);
+  padding: 20px;
+}
+
+.dbm-confirm-message {
+  margin: 0 0 18px;
+  color: var(--dbm-text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.dbm-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dbm-section {
+  background: var(--dbm-white);
+  border: 1px solid var(--dbm-border);
+  box-shadow: 0 1px 2px rgba(11, 31, 74, 0.04);
+}
+
+.dbm-section-header {
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--dbm-navy);
+  color: var(--dbm-white);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.dbm-section-body {
+  padding: 16px;
+}
+
+.dbm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.dbm-span-2 {
+  grid-column: span 2;
+}
+
+.dbm-span-3 {
+  grid-column: span 3;
+}
+
+.dbm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dbm-label {
+  color: var(--dbm-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dbm-required {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
+.dbm-field input[type='text'],
+.dbm-field input[type='number'],
+.dbm-field input[type='date'],
+.dbm-field select,
+.dbm-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--dbm-border);
+  background: var(--dbm-input-bg);
+  color: var(--dbm-text);
+  border-radius: 2px;
+  padding: 8px 10px;
+  font: inherit;
+  outline: none;
+}
+
+.dbm-field input:focus,
+.dbm-field select:focus,
+.dbm-field textarea:focus {
+  border-color: var(--dbm-navy-mid);
+  box-shadow: 0 0 0 2px rgba(22, 52, 104, 0.12);
+}
+
+.dbm-field input:disabled,
+.dbm-field input[readonly],
+.dbm-field select:disabled,
+.dbm-field textarea:disabled {
+  color: var(--dbm-muted);
+  background: #e4e6ef;
+  cursor: not-allowed;
+}
+
+.dbm-field select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #5c6478 50%),
+    linear-gradient(135deg, #5c6478 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) calc(50% - 2px),
+    calc(100% - 9px) calc(50% - 2px);
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 28px;
+}
+
+.dbm-field textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.dbm-checkbox-row {
+  display: flex;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.dbm-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--dbm-text);
+  cursor: pointer;
+}
+
+.dbm-checkbox input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--dbm-navy);
+}
+
+.dbm-chip-multi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  min-height: 42px;
+  border: 1px solid var(--dbm-border);
+  background: var(--dbm-input-bg);
+}
+
+.dbm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--dbm-white);
+  border: 1px solid var(--dbm-border);
+  border-radius: 2px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.dbm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 0 8px;
+}
+
+.dbm-btn {
+  min-width: 96px;
+  border: none;
+  border-radius: 3px;
+  padding: 9px 18px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--dbm-white);
+  cursor: pointer;
+}
+
+.dbm-btn-primary,
+.dbm-btn-secondary {
+  background: var(--dbm-coral);
+}
+
+.dbm-btn:hover {
+  background: var(--dbm-coral-hover);
+}
+
+.dbm-field-spacer {
+  display: none;
+}
+
+@media (max-width: 960px) {
+  .dbm-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dbm-span-2,
+  .dbm-span-3 {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .dbm-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dbm-span-2,
+  .dbm-span-3 {
+    grid-column: span 1;
+  }
+
+  .dbm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .dbm-btn {
+    width: 100%;
+  }
+}

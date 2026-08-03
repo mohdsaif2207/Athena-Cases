@@ -11,6 +11,6 @@ public interface NotificationService {
 
     void notifyUser(NotifyUserCommand command);
 
-    /** Queue rows visible to the current user's receiving teams. */
+    /** Queue rows visible to the caller's receiving teams (requires NOTIF_VIEW). */
     List<NotificationQueueItem> listAuthorizedQueue();
 }

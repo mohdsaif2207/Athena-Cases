@@ -95,6 +95,19 @@ export function CasesSearchPage() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    const state = location.state as
+      | { dbmCreateSuccess?: boolean; caseNumber?: string }
+      | null
+    if (!state?.dbmCreateSuccess || !state.caseNumber) {
+      return
+    }
+    setToast(`Case created successfully with Case ID ${state.caseNumber}.`)
+    window.setTimeout(() => setToast(null), 4000)
+    navigate(location.pathname, { replace: true, state: null })
+    void load()
+  }, [location.state, location.pathname, navigate, load])
+
   const filtered = useMemo(
     () => applyCaseFilters(allCases, columnFilters, advancedFilters),
     [allCases, columnFilters, advancedFilters],
