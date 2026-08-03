@@ -17,6 +17,27 @@ const controlSx = {
     fontSize: EXRT_TEAL.inputSize,
     fontFamily: EXRT_TEAL.fontFamily,
     minHeight: EXRT_TEAL.inputHeight,
+    color: EXRT_TEAL.textPrimary,
+  },
+  '& .MuiOutlinedInput-notchedOutline': {
+    borderColor: EXRT_TEAL.inputBorder,
+  },
+  '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+    borderColor: EXRT_TEAL.secondary,
+  },
+  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: EXRT_TEAL.focusBorder,
+    borderWidth: 1,
+  },
+  '& .MuiInputBase-input': {
+    py: '6px',
+    fontSize: EXRT_TEAL.inputSize,
+  },
+  '& .MuiSelect-select': {
+    py: '6px !important',
+    minHeight: `${EXRT_TEAL.inputHeight - 14}px !important`,
+    display: 'flex',
+    alignItems: 'center',
   },
   '& .MuiInputBase-root.Mui-disabled': {
     backgroundColor: EXRT_TEAL.disabledBg,
@@ -25,9 +46,17 @@ const controlSx = {
     fontWeight: 600,
     fontSize: EXRT_TEAL.labelSize,
     fontFamily: EXRT_TEAL.fontFamily,
+    color: EXRT_TEAL.textSecondary,
+  },
+  '& .MuiInputLabel-root.Mui-focused': {
+    color: EXRT_TEAL.primary,
   },
   '& .MuiFormLabel-asterisk': {
     color: EXRT_TEAL.error,
+  },
+  '& .MuiFormHelperText-root': {
+    fontSize: 11,
+    marginLeft: 0,
   },
 } as const
 
@@ -123,7 +152,7 @@ export function ExrtSelectField({
         data-testid={testId}
       >
         {options.map((opt) => (
-          <MenuItem key={opt.id} value={opt.code || opt.id}>
+          <MenuItem key={opt.id} value={opt.code || opt.id} sx={{ fontSize: EXRT_TEAL.inputSize }}>
             {opt.label}
           </MenuItem>
         ))}

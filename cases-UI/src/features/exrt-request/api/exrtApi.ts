@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getAccessToken } from '@/lib/auth-storage'
 import type { ApiEnvelope, ExrtCaseCreatePayload, ExrtCaseCreateResult, LookupItem } from '../types/exrt.types'
 import { EXRT_API_BASE, EXRT_LOOKUP_BASE } from '../theme/exrtTheme'
 
@@ -18,8 +19,8 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  // Auth header only — does not rewrite baseURL or path
-  const token = localStorage.getItem('accessToken')
+  // Auth header only — does not rewrite baseURL or path. Uses shared session JWT.
+  const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }

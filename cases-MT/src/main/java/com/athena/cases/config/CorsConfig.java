@@ -1,17 +1,20 @@
 package com.athena.cases.config;
 
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 /**
- * Allows the Vite UI (localhost:5173/5174) to call the API on a different port.
- * Without this, the browser blocks lookup XHRs even when curl/browser-nav to the API works.
+ * Fallback CORS when SecurityConfig's CorsConfigurationSource is absent.
+ * Prefer SecurityConfig CORS when the auth module is on the classpath.
  */
 @Configuration
+@ConditionalOnMissingBean(CorsConfigurationSource.class)
 public class CorsConfig {
 
   @Bean

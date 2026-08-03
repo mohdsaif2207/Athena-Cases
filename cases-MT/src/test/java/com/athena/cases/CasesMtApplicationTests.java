@@ -1,10 +1,13 @@
 package com.athena.cases;
 
+import com.athena.cases.support.AbstractPostgresIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-class CasesMtApplicationTests {
+@ActiveProfiles("test")
+class CasesMtApplicationTests extends AbstractPostgresIntegrationTest {
 
 	@Test
 	void contextLoads() {

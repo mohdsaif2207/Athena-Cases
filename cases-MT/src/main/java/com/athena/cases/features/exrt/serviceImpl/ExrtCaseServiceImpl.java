@@ -1,6 +1,10 @@
 package com.athena.cases.features.exrt.serviceImpl;
 
+import com.athena.cases.casemanagement.CaseEntity;
+import com.athena.cases.casemanagement.CaseRepository;
 import com.athena.cases.common.constants.PermissionCodes;
+import com.athena.cases.common.enums.CaseTypeCode;
+import com.athena.cases.common.exception.ResourceNotFoundException;
 import com.athena.cases.features.exrt.constant.ExrtConstants;
 import com.athena.cases.features.exrt.dto.ExrtCaseCreateRequest;
 import com.athena.cases.features.exrt.dto.ExrtCaseCreateResponse;
@@ -23,6 +27,8 @@ import com.athena.cases.features.exrt.repository.CaseHeaderRepository;
 import com.athena.cases.features.exrt.repository.ExrtCaseDetailRepository;
 import com.athena.cases.features.exrt.service.ExrtCaseService;
 import com.athena.cases.features.exrt.util.ExrtCaseNumberGenerator;
+import com.athena.cases.identity.entity.CaseTypeEntity;
+import com.athena.cases.identity.repository.CaseTypeRepository;
 import com.athena.cases.lookup.LookupItem;
 import com.athena.cases.lookup.LookupService;
 import com.athena.cases.notification.NotificationService;
@@ -31,6 +37,7 @@ import com.athena.cases.security.CurrentUserService;
 import com.athena.cases.workflow.StartWorkflowCommand;
 import com.athena.cases.workflow.WorkflowRef;
 import com.athena.cases.workflow.WorkflowService;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -46,6 +53,8 @@ public class ExrtCaseServiceImpl implements ExrtCaseService {
 
     private final CaseHeaderRepository caseHeaderRepository;
     private final ExrtCaseDetailRepository exrtCaseDetailRepository;
+    private final CaseRepository caseRepository;
+    private final CaseTypeRepository caseTypeRepository;
     private final ExrtCaseMapper exrtCaseMapper;
     private final ExrtCaseNumberGenerator exrtCaseNumberGenerator;
     private final CurrentUserService currentUserService;
@@ -56,6 +65,8 @@ public class ExrtCaseServiceImpl implements ExrtCaseService {
     public ExrtCaseServiceImpl(
             CaseHeaderRepository caseHeaderRepository,
             ExrtCaseDetailRepository exrtCaseDetailRepository,
+            CaseRepository caseRepository,
+            CaseTypeRepository caseTypeRepository,
             ExrtCaseMapper exrtCaseMapper,
             ExrtCaseNumberGenerator exrtCaseNumberGenerator,
             CurrentUserService currentUserService,
@@ -64,6 +75,8 @@ public class ExrtCaseServiceImpl implements ExrtCaseService {
             LookupService lookupService) {
         this.caseHeaderRepository = caseHeaderRepository;
         this.exrtCaseDetailRepository = exrtCaseDetailRepository;
+        this.caseRepository = caseRepository;
+        this.caseTypeRepository = caseTypeRepository;
         this.exrtCaseMapper = exrtCaseMapper;
         this.exrtCaseNumberGenerator = exrtCaseNumberGenerator;
         this.currentUserService = currentUserService;
@@ -83,39 +96,81 @@ public class ExrtCaseServiceImpl implements ExrtCaseService {
 
         String actor = currentUserService.requireUserId();
         String caseOwner = currentUserService.requireDisplayName();
+        String caseNumber = exrtCaseNumberGenerator.next();
 
         CaseHeaderEntity header = exrtCaseMapper.toHeader(request, caseOwner, actor);
-        // Business Case ID from PostgreSQL sequence (ExR000001…) — PK id remains DB-generated.
-        header.setCaseNumber(exrtCaseNumberGenerator.next());
+        header.setCaseNumber(caseNumber);
         CaseHeaderEntity savedHeader = caseHeaderRepository.save(header);
 
         ExrtCaseDetailEntity detail = exrtCaseMapper.toDetail(request, savedHeader, actor);
         exrtCaseDetailRepository.save(detail);
 
-        Long caseId = savedHeader.getId();
-        log.info("exrt case created - caseId={}, caseNumber={}, owner={}",
-                caseId, savedHeader.getCaseNumber(), caseOwner);
+        // Platform `cases` row required: workflows/notifications FK to cases(id); also feeds Cases Grid.
+        CaseEntity platformCase = syncPlatformCase(request, caseNumber, caseOwner, actor);
+        Long platformCaseId = platformCase.getId();
 
-        // Create-once workflow: only on create path (never on edit). Same TX so case+workflow stay consistent.
+        log.info("exrt case created - exrtCaseId={}, platformCaseId={}, caseNumber={}, owner={}",
+                savedHeader.getId(), platformCaseId, caseNumber, caseOwner);
+
         WorkflowRef workflowRef = workflowService.start(new StartWorkflowCommand(
-                caseId,
+                platformCaseId,
                 ExrtConstants.RECEIVER_TEAM_DBM,
                 ExrtConstants.WORKFLOW_STATUS_PENDING_ASSIGNMENT
         ));
         savedHeader.setWorkflowTriggered(true);
         caseHeaderRepository.save(savedHeader);
 
-        String message = "A new ExRT Request (Case #" + caseId + ") has been assigned to your team.";
+        String message = "A new ExRT Request (Case #" + caseNumber + ") has been assigned to your team.";
         notificationService.notifyTeam(new NotifyTeamCommand(
-                caseId,
+                platformCaseId,
                 ExrtConstants.RECEIVER_TEAM_DBM,
                 message,
-                ExrtConstants.CASE_DETAILS_DEEP_LINK.formatted(caseId)
+                ExrtConstants.CASE_DETAILS_DEEP_LINK.formatted(platformCaseId)
         ));
-        log.info("exrt workflow+notification created - caseId={}, workflowId={}",
-                caseId, workflowRef.workflowInstanceId());
+        log.info("exrt workflow+notification created - platformCaseId={}, workflowId={}",
+                platformCaseId, workflowRef.workflowInstanceId());
 
         return exrtCaseMapper.toCreateResponse(savedHeader);
+    }
+
+    /**
+     * Mirrors the ExRT case into the shared {@code cases} table so workflow/notification FKs
+     * and the Cases Grid remain consistent — without schema changes.
+     */
+    private CaseEntity syncPlatformCase(
+            ExrtCaseCreateRequest request, String caseNumber, String caseOwner, String actor) {
+        CaseTypeEntity caseType = caseTypeRepository.findByCode(CaseTypeCode.EXRT_REQUEST.name())
+                .orElseThrow(() -> new ResourceNotFoundException("CaseType", CaseTypeCode.EXRT_REQUEST.name()));
+
+        Instant now = Instant.now();
+        CaseEntity entity = new CaseEntity();
+        entity.setCaseNumber(caseNumber);
+        entity.setCaseTypeId(caseType.getId());
+        entity.setClientId(request.clientId());
+        entity.setSubject(request.subject());
+        entity.setDescription(request.description());
+        entity.setCaseOwner(caseOwner);
+        entity.setCaseStatus(blankToDefault(request.status(), ExrtConstants.DEFAULT_STATUS));
+        entity.setPriority(toPlatformPriority(request.priority()));
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
+        entity.setCreatedBy(actor);
+        entity.setUpdatedBy(actor);
+        entity.setVersion(1);
+        return caseRepository.save(entity);
+    }
+
+    private static String toPlatformPriority(String priority) {
+        String raw = priority == null || priority.isBlank() ? ExrtConstants.DEFAULT_PRIORITY : priority.trim();
+        return switch (raw.toUpperCase(Locale.ROOT)) {
+            case "HIGH" -> "High";
+            case "LOW" -> "Low";
+            default -> "Medium";
+        };
+    }
+
+    private static String blankToDefault(String value, String defaultValue) {
+        return value == null || value.isBlank() ? defaultValue : value.trim();
     }
 
     @Override

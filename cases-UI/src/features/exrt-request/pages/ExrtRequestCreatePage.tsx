@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import { useCreateExrtCase } from '../hooks/useCreateExrtCase'
 import { useExrtLookups } from '../hooks/useExrtLookups'
 import { EXRT_TEAL, exrtCardSx, exrtSectionHeaderSx } from '../theme/exrtTheme'
@@ -32,21 +33,10 @@ import {
   type ExrtCaseFormValues,
 } from '../validation/exrtCaseCreateSchema'
 
-function resolveCaseOwner(): string {
-  try {
-    const raw = localStorage.getItem('userContext')
-    if (raw) {
-      const parsed = JSON.parse(raw) as { displayName?: string; username?: string }
-      return parsed.displayName || parsed.username || 'Logged-in User'
-    }
-  } catch {
-    // ignore
-  }
-  return 'Logged-in User'
-}
-
 export function ExrtRequestCreatePage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const caseOwnerName = user?.displayName?.trim() || user?.username?.trim() || ''
   const [cancelOpen, setCancelOpen] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const createMutation = useCreateExrtCase()
@@ -54,20 +44,23 @@ export function ExrtRequestCreatePage() {
   const {
     control,
     handleSubmit,
-    reset,
+    setValue,
     formState: { errors, isDirty, isSubmitting },
   } = useForm<ExrtCaseFormValues>({
     resolver: zodResolver(exrtCaseCreateSchema),
-    defaultValues: { ...exrtFormDefaults, caseOwner: resolveCaseOwner() },
+    defaultValues: { ...exrtFormDefaults, caseOwner: caseOwnerName },
     mode: 'onBlur',
   })
 
   const clientId = useWatch({ control, name: 'clientId' })
   const lookups = useExrtLookups(clientId)
 
+  // Keep Case Owner in sync with AuthContext (sessionStorage-backed user profile).
   useEffect(() => {
-    reset({ ...exrtFormDefaults, caseOwner: resolveCaseOwner() })
-  }, [reset])
+    if (caseOwnerName) {
+      setValue('caseOwner', caseOwnerName, { shouldDirty: false, shouldValidate: true })
+    }
+  }, [caseOwnerName, setValue])
 
   const cardSx = useMemo(() => exrtCardSx, [])
 
@@ -78,7 +71,12 @@ export function ExrtRequestCreatePage() {
       ...payload,
       callCenterEducation: Boolean(payload.callCenterEducation),
     })
-    setSuccessMessage(result.message)
+    const message = result.message || `Case created successfully with Case ID ${result.caseNumber}.`
+    setSuccessMessage(message)
+    // Brief success display, then Cases Grid (workflow + notification already completed on server).
+    window.setTimeout(() => {
+      navigate('/cases', { replace: true, state: { successMessage: message } })
+    }, 1200)
   })
 
   if (lookups.isLoading) {
@@ -111,7 +109,7 @@ export function ExrtRequestCreatePage() {
         component="form"
         onSubmit={onSubmit}
         noValidate
-        sx={{ maxWidth: 1100, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 1.5 }}
+        sx={{ maxWidth: 1100, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}
       >
         <Typography
           variant="h4"
@@ -121,7 +119,8 @@ export function ExrtRequestCreatePage() {
             fontSize: EXRT_TEAL.titleSize,
             color: EXRT_TEAL.sectionTitle,
             fontFamily: EXRT_TEAL.fontFamily,
-            mb: 0.5,
+            mb: 0.25,
+            letterSpacing: '0.01em',
           }}
         >
           Create ExRT Request

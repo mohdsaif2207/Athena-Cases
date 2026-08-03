@@ -17,4 +17,7 @@ public interface LookupService {
     List<LookupItem> listProducts(String query);
 
     List<LookupItem> findParentCases(String query);
+
+    /** Case types the current user may create (RBAC-scoped). */
+    List<LookupItem> listAuthorizedCaseTypes();
 }

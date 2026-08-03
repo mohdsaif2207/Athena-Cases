@@ -1,15 +1,24 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-// https://vite.dev/config/
+const rootDir = path.dirname(fileURLToPath(import.meta.url))
+
+// Proxy + axios base URL must match cases-MT (8090). Never default to 8080.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  // Proxy target must match VITE_API_BASE_URL / cases-MT (8090). Absolute axios baseURL bypasses proxy.
   const apiTarget = env.VITE_API_BASE_URL?.trim() || 'http://localhost:8090'
 
   return {
     plugins: [react()],
+    resolve: {
+      alias: {
+        '@': path.resolve(rootDir, './src'),
+      },
+    },
     server: {
+      port: 5173,
       proxy: {
         '/api': {
           target: apiTarget,

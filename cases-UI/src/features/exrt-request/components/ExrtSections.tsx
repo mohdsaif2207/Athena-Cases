@@ -10,7 +10,7 @@ const FieldGrid = ({ children }: { children: React.ReactNode }) => (
   <Box
     sx={{
       display: 'grid',
-      gap: 1.5,
+      gap: 1.25,
       gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
       alignItems: 'start',
     }}
@@ -51,11 +51,22 @@ export function CaseDetailsSection({
           options={statusOptions} required error={errors.status?.message} testId="exrt-status" />
       )} />
       <Controller name="caseOwner" control={control} render={({ field }) => (
-        <TextField fullWidth size="small" label="Case Owner" value={field.value} disabled
+        <TextField fullWidth size="small" label="Case Owner (Logged-in User)" value={field.value} disabled
           helperText="Auto-filled from logged-in user"
           sx={{
-            '& .MuiInputBase-root': { backgroundColor: '#F3F3F3', borderRadius: '2px', minHeight: 36, fontSize: 13 },
-            '& .MuiInputLabel-root': { fontWeight: 600, fontSize: 13 },
+            '& .MuiInputBase-root': {
+              backgroundColor: '#F2F4F7',
+              borderRadius: '2px',
+              minHeight: 32,
+              fontSize: 12,
+              fontFamily: "'Segoe UI', Roboto, sans-serif",
+            },
+            '& .MuiInputLabel-root': {
+              fontWeight: 600,
+              fontSize: 11,
+              color: '#5F6B7A',
+            },
+            '& .MuiFormHelperText-root': { fontSize: 11, ml: 0 },
           }}
           slotProps={{ htmlInput: { 'data-testid': 'exrt-case-owner' } }} />
       )} />

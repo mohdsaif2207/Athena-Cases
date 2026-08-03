@@ -3,11 +3,14 @@ package com.athena.cases.features.exrt.config;
 import com.athena.cases.common.constants.PermissionCodes;
 import com.athena.cases.lookup.LookupItem;
 import com.athena.cases.lookup.LookupService;
+import com.athena.cases.notification.NotificationQueueItem;
 import com.athena.cases.notification.NotificationService;
 import com.athena.cases.notification.NotifyTeamCommand;
 import com.athena.cases.notification.NotifyUserCommand;
 import com.athena.cases.security.CurrentUserService;
+import com.athena.cases.security.UserPrincipal;
 import com.athena.cases.workflow.StartWorkflowCommand;
+import com.athena.cases.workflow.WorkflowQueueItem;
 import com.athena.cases.workflow.WorkflowRef;
 import com.athena.cases.workflow.WorkflowService;
 import java.util.List;
@@ -46,7 +49,15 @@ public class ExrtPortFallbackConfig {
             @Override
             public boolean hasPermission(String permissionCode) {
                 return PermissionCodes.CASES_CREATE.equals(permissionCode)
-                        || PermissionCodes.CASES_VIEW.equals(permissionCode);
+                        || PermissionCodes.CASES_VIEW.equals(permissionCode)
+                        || PermissionCodes.WF_VIEW.equals(permissionCode)
+                        || PermissionCodes.NOTIF_VIEW.equals(permissionCode);
+            }
+
+            @Override
+            public UserPrincipal requirePrincipal() {
+                throw new UnsupportedOperationException(
+                        "Dev CurrentUserService fallback has no JWT principal — auth module required");
             }
         };
     }
@@ -84,6 +95,11 @@ public class ExrtPortFallbackConfig {
                 }
                 return ref;
             }
+
+            @Override
+            public List<WorkflowQueueItem> listAuthorizedQueue() {
+                return List.of();
+            }
         };
     }
 
@@ -100,6 +116,11 @@ public class ExrtPortFallbackConfig {
             @Override
             public void notifyUser(NotifyUserCommand command) {
                 log.info("dev notifyUser - caseId={}, userId={}", command.caseId(), command.userId());
+            }
+
+            @Override
+            public List<NotificationQueueItem> listAuthorizedQueue() {
+                return List.of();
             }
         };
     }
@@ -139,6 +160,13 @@ public class ExrtPortFallbackConfig {
             @Override
             public List<LookupItem> findParentCases(String query) {
                 return List.of();
+            }
+
+            @Override
+            public List<LookupItem> listAuthorizedCaseTypes() {
+                return List.of(
+                        new LookupItem("1", "EXRT_REQUEST", "Executive Response Team (ExRT) Request")
+                );
             }
         };
     }

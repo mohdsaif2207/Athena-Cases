@@ -1,0 +1,25 @@
+spring:
+  # Datasource URL/user/password come from AbstractPostgresIntegrationTest (Testcontainers).
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173
+  jwt:
+    secret: test-jwt-secret-key-at-least-32-characters-long
+    expiration-minutes: 60
+  default:
+    admin:
+      seed-enabled: true
+      username: fm_admin
+      password: FM@Admin123
+      display-name: ADMKL
