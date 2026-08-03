@@ -14,5 +14,8 @@ public interface CaseManagementService {
 
     CaseRef updateCaseHeader(Long caseId, UpdateCaseHeaderCommand command);
 
+    /**
+     * Returns case rows the authenticated user may view (case-type RBAC).
+     */
     List<CaseListItem> listAuthorizedCases();
 }

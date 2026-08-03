@@ -1,7 +1,18 @@
-# Local development — PostgreSQL via application.properties (or DB_URL / DB_USER / DB_PASSWORD).
+# Local development — PostgreSQL.
+# URL / username / password: application.properties (do not set H2 defaults here).
 spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: false
+    properties:
+      hibernate:
+        default_schema: cases_mt
+  flyway:
+    schemas: cases_mt
+    default-schema: cases_mt
+    create-schemas: true
 
 app:
   cors:

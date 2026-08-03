@@ -18,7 +18,7 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
 
   if (isAuthenticated) {
-    return <Navigate to="/cases" replace />
+    return <Navigate to="/home" replace />
   }
 
   function validate(): boolean {
@@ -48,7 +48,7 @@ export function LoginPage() {
     setSubmitting(true)
     try {
       await login(username.trim(), password)
-      navigate('/cases', { replace: true })
+      navigate('/home', { replace: true })
     } catch (error) {
       setFormError(getErrorMessage(error, 'Unable to sign in. Please try again.'))
     } finally {
