@@ -3,8 +3,7 @@ package com.athena.cases.lookup;
 import java.util.List;
 
 /**
- * Port for read-only reference data used by case-type forms.
- * Master data ownership is platform/Lead — features store IDs only.
+ * Port for read-only reference data used by case-type forms and shared lookups.
  */
 public interface LookupService {
 
@@ -17,6 +16,9 @@ public interface LookupService {
     List<LookupItem> listProducts(String query);
 
     List<LookupItem> findParentCases(String query);
+
+    /** Active case types the caller is authorized to create (RBAC-filtered). */
+    List<LookupItem> listAuthorizedCaseTypes();
 
     /** Active clients for DBM / shared dropdowns. */
     List<LookupItem> listActiveClients();

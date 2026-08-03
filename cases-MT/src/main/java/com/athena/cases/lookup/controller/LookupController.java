@@ -14,7 +14,7 @@ import com.athena.cases.lookup.LookupService;
 /**
  * Shared lookup REST API for form dropdowns (mock data until platform masters exist).
  */
-@RestController
+@RestController("dbmFormLookupController")
 @RequestMapping("/api/lookups")
 public class LookupController {
 
