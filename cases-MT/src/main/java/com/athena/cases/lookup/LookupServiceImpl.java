@@ -75,4 +75,19 @@ public class LookupServiceImpl implements LookupService {
                 .map(ct -> new LookupItem(String.valueOf(ct.getId()), ct.getCode(), ct.getName()))
                 .toList();
     }
+
+    @Override
+    public List<LookupItem> listActiveClients() {
+        return LookupMockData.CLIENTS;
+    }
+
+    @Override
+    public List<EventIdLookupItem> listActiveEventIds() {
+        return LookupMockData.EVENT_IDS;
+    }
+
+    @Override
+    public List<LookupItem> listActiveSpokenKeys() {
+        return LookupMockData.SPOKEN_KEYS;
+    }
 }

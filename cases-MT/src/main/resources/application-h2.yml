@@ -1,0 +1,36 @@
+# TEMPORARY — local-only H2 profile for UI integration while shared Postgres/Flyway is blocked.
+# Activate:  mvnw spring-boot:run -Dspring-boot.run.profiles=h2
+# Revert:    omit the profile (default "dev" uses PostgreSQL from application.properties).
+# Do NOT use this profile in shared/CI environments. Delete this file when Postgres is ready.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:h2:file:./data/cases-mt-h2;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    show-sql: false
+  flyway:
+    enabled: true
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+  jwt:
+    secret: ${JWT_SECRET:athena-cases-dev-jwt-secret-key-change-me-32chars-min}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
+  default:
+    admin:
+      seed-enabled: true
+      username: ${ADMIN_USERNAME:fm_admin}
+      password: ${ADMIN_PASSWORD:FM@Admin123}
+      display-name: ${ADMIN_DISPLAY_NAME:ADMKL}
+
+logging:
+  level:
+    root: INFO
+    com.athena.cases: DEBUG

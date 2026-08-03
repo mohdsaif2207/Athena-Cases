@@ -29,6 +29,24 @@ public class LookupController {
         return ResponseEntity.ok(ApiResponse.of(lookupService.listAuthorizedCaseTypes(), currentRequestId()));
     }
 
+    @GetMapping("/clients")
+    @PreAuthorize("hasAuthority('PERM_CASES_CREATE') or hasAuthority('PERM_CASES_ACCESS')")
+    public ResponseEntity<ApiResponse<List<LookupItem>>> clients() {
+        return ResponseEntity.ok(ApiResponse.of(lookupService.listActiveClients(), currentRequestId()));
+    }
+
+    @GetMapping("/event-ids")
+    @PreAuthorize("hasAuthority('PERM_CASES_CREATE') or hasAuthority('PERM_CASES_ACCESS')")
+    public ResponseEntity<ApiResponse<List<EventIdLookupItem>>> eventIds() {
+        return ResponseEntity.ok(ApiResponse.of(lookupService.listActiveEventIds(), currentRequestId()));
+    }
+
+    @GetMapping("/spoken-keys")
+    @PreAuthorize("hasAuthority('PERM_CASES_CREATE') or hasAuthority('PERM_CASES_ACCESS')")
+    public ResponseEntity<ApiResponse<List<LookupItem>>> spokenKeys() {
+        return ResponseEntity.ok(ApiResponse.of(lookupService.listActiveSpokenKeys(), currentRequestId()));
+    }
+
     private static String currentRequestId() {
         String id = MDC.get(RequestIdFilter.MDC_KEY);
         return id == null ? "unknown" : id;

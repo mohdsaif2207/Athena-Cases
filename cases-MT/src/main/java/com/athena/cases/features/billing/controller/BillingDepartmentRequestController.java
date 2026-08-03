@@ -47,7 +47,7 @@ public class BillingDepartmentRequestController {
      * Create Billing Department Request — LLD §16.2.
      */
     @PostMapping
-    @PreAuthorize("hasAuthority('" + PermissionCodes.CASES_CREATE + "')")
+    @PreAuthorize("hasAuthority('PERM_" + PermissionCodes.CASES_CREATE + "')")
     public ResponseEntity<ApiResponse<BillingDepartmentRequestResponse>> create(
             @Valid @RequestBody BillingDepartmentRequestCreateRequest request,
             HttpServletRequest httpRequest
@@ -63,7 +63,7 @@ public class BillingDepartmentRequestController {
      * Hold-level Available options — LLD §16.5.
      */
     @GetMapping("/lookups/hold-levels")
-    @PreAuthorize("hasAuthority('" + PermissionCodes.CASES_VIEW + "')")
+    @PreAuthorize("hasAuthority('PERM_" + PermissionCodes.CASES_VIEW + "')")
     public ResponseEntity<ApiResponse<HoldLevelsLookupResponse>> listHoldLevels(
             @RequestParam(required = false) BillingHoldType holdType,
             HttpServletRequest httpRequest
@@ -77,7 +77,7 @@ public class BillingDepartmentRequestController {
      * Users with Billing case access — LLD §16.5.
      */
     @GetMapping("/lookups/assignees")
-    @PreAuthorize("hasAuthority('" + PermissionCodes.CASES_VIEW + "')")
+    @PreAuthorize("hasAuthority('PERM_" + PermissionCodes.CASES_VIEW + "')")
     public ResponseEntity<ApiResponse<List<BillingAssigneeLookupResponse>>> listAssignees(
             HttpServletRequest httpRequest
     ) {
@@ -92,7 +92,7 @@ public class BillingDepartmentRequestController {
      * View / Edit load — LLD §16.3.
      */
     @GetMapping("/{caseId}")
-    @PreAuthorize("hasAuthority('" + PermissionCodes.CASES_VIEW + "')")
+    @PreAuthorize("hasAuthority('PERM_" + PermissionCodes.CASES_VIEW + "')")
     public ResponseEntity<ApiResponse<BillingDepartmentRequestResponse>> getByCaseId(
             @PathVariable Long caseId,
             HttpServletRequest httpRequest
@@ -105,7 +105,7 @@ public class BillingDepartmentRequestController {
      * Update editable fields — LLD §16.4.
      */
     @PutMapping("/{caseId}")
-    @PreAuthorize("hasAuthority('" + PermissionCodes.CASES_EDIT + "')")
+    @PreAuthorize("hasAuthority('PERM_" + PermissionCodes.CASES_EDIT + "')")
     public ResponseEntity<ApiResponse<BillingDepartmentRequestResponse>> update(
             @PathVariable Long caseId,
             @Valid @RequestBody BillingDepartmentRequestUpdateRequest request,

@@ -19,4 +19,13 @@ public interface LookupService {
     List<LookupItem> findParentCases(String query);
 
     List<LookupItem> listAuthorizedCaseTypes();
+
+    /** Active clients for DBM / shared dropdowns. */
+    List<LookupItem> listActiveClients();
+
+    /** Active Event IDs including Mail Month (DBM Section 3 auto-populate). */
+    List<EventIdLookupItem> listActiveEventIds();
+
+    /** Active spoken keys for DBM multi-select. */
+    List<LookupItem> listActiveSpokenKeys();
 }
