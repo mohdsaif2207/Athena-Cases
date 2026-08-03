@@ -10,9 +10,4 @@ public interface CurrentUserService {
     String requireDisplayName();
 
     boolean hasPermission(String permissionCode);
-
-    /**
-     * Returns the authenticated {@link UserPrincipal} or throws if unauthenticated.
-     */
-    UserPrincipal requirePrincipal();
 }

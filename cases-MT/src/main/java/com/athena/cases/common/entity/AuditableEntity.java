@@ -1,31 +1,18 @@
 package com.athena.cases.common.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.MappedSuperclass;
-import jakarta.persistence.Version;
 import java.time.Instant;
 
 /**
  * Audit + optimistic-lock fields shared by business entities.
+ * Wiring to Spring Data auditing happens in foundation Phase 3–5.
  */
-@MappedSuperclass
 public abstract class AuditableEntity extends BaseEntity {
 
-    @Column(name = "created_at", nullable = false)
     private Instant createdAt;
-
-    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
-
-    @Column(name = "created_by", nullable = false, length = 64)
     private String createdBy;
-
-    @Column(name = "updated_by", nullable = false, length = 64)
     private String updatedBy;
-
-    @Version
-    @Column(name = "version", nullable = false)
-    private Integer version;
+    private Long version;
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -59,11 +46,11 @@ public abstract class AuditableEntity extends BaseEntity {
         this.updatedBy = updatedBy;
     }
 
-    public Integer getVersion() {
+    public Long getVersion() {
         return version;
     }
 
-    public void setVersion(Integer version) {
+    public void setVersion(Long version) {
         this.version = version;
     }
 }
