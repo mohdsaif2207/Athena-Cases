@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { EventIdLookupItem } from '../api/lookups'
 import { useCreateDbmWorkOrder, toUserFriendlyError } from '../hooks/useCreateDbmWorkOrder'
 import { useDbmLookups } from '../hooks/useDbmLookups'
@@ -6,12 +7,14 @@ import { toCreateDbmWorkOrderRequest } from '../mappers/toCreateRequest'
 import {
   DEFAULT_DBM_CREATE_FORM,
   type DbmCreateFormState,
-  type DbmMandatoryField,
 } from '../types/form'
 import {
   hasDbmCreateFieldErrors,
+  isSpecialInstructionsRequired,
+  showsCustomApprovalHint,
   validateDbmCreateForm,
   type DbmCreateFieldErrors,
+  type DbmCreateValidatedField,
 } from '../validation/createValidation'
 import './DbmWorkOrderCreatePage.css'
 
@@ -64,10 +67,12 @@ function toggleMultiValue(current: string[], value: string): string[] {
  * Lookups + mandatory create validation + POST /api/dbm/work-orders.
  */
 export function DbmWorkOrderCreatePage() {
+  const navigate = useNavigate()
   const [form, setForm] = useState<DbmCreateFormState>(DEFAULT_DBM_CREATE_FORM)
   const [fieldErrors, setFieldErrors] = useState<DbmCreateFieldErrors>({})
   const [saveError, setSaveError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
 
   const {
     data: lookups,
@@ -84,8 +89,12 @@ export function DbmWorkOrderCreatePage() {
   const eventIds = lookups?.eventIds ?? []
   const spokenKeys = lookups?.spokenKeys ?? []
   const lookupsReady = !lookupsLoading && !lookupsFailed
+  const specialInstructionsRequired = isSpecialInstructionsRequired(
+    form.transferType,
+  )
+  const customApprovalHint = showsCustomApprovalHint(form.transferType)
 
-  const clearFieldError = (key: DbmMandatoryField) => {
+  const clearFieldError = (key: DbmCreateValidatedField) => {
     setFieldErrors((prev) => {
       if (!prev[key]) {
         return prev
@@ -111,9 +120,21 @@ export function DbmWorkOrderCreatePage() {
       key === 'status' ||
       key === 'transferType' ||
       key === 'returnFileExpected' ||
-      key === 'clientId'
+      key === 'clientId' ||
+      key === 'specialInstructions'
     ) {
       clearFieldError(key)
+    }
+  }
+
+  const handleTransferTypeChange = (value: string) => {
+    setForm((prev) => ({ ...prev, transferType: value }))
+    setSuccessMessage(null)
+    setSaveError(null)
+    clearFieldError('transferType')
+    // Conditional Special Instructions rule no longer applies.
+    if (!isSpecialInstructionsRequired(value)) {
+      clearFieldError('specialInstructions')
     }
   }
 
@@ -135,6 +156,23 @@ export function DbmWorkOrderCreatePage() {
     setFieldErrors({})
     setSaveError(null)
     setSuccessMessage(null)
+    setCancelConfirmOpen(false)
+  }
+
+  const handleCancelClick = () => {
+    if (isSaving) {
+      return
+    }
+    setCancelConfirmOpen(true)
+  }
+
+  const handleCancelConfirmNo = () => {
+    setCancelConfirmOpen(false)
+  }
+
+  const handleCancelConfirmYes = () => {
+    setCancelConfirmOpen(false)
+    navigate('/cases')
   }
 
   const handleSubmit = (event: FormEvent) => {
@@ -159,7 +197,7 @@ export function DbmWorkOrderCreatePage() {
         setFieldErrors({})
         setSaveError(null)
         setSuccessMessage(
-          `Case created successfully with Case ID ${created.caseId}.`,
+          `Case created successfully with Case ID ${created.caseNumber}.`,
         )
       },
       onError: (error) => {
@@ -373,12 +411,18 @@ export function DbmWorkOrderCreatePage() {
                 required
                 error={fieldErrors.transferType}
                 invalid={!!fieldErrors.transferType}
+                hint={
+                  customApprovalHint
+                    ? 'This request will require DBM Manager approval.'
+                    : undefined
+                }
+                hintTestId="dbm-custom-approval-hint"
               >
                 <select
                   data-testid="dbm-transfer-type"
                   value={form.transferType}
                   aria-invalid={!!fieldErrors.transferType}
-                  onChange={(e) => setField('transferType', e.target.value)}
+                  onChange={(e) => handleTransferTypeChange(e.target.value)}
                 >
                   <option value="">Select Transfer Type</option>
                   {TRANSFER_TYPE_OPTIONS.map((opt) => (
@@ -483,12 +527,21 @@ export function DbmWorkOrderCreatePage() {
                 </select>
               </Field>
 
-              <Field label="Special Instructions" className="dbm-span-2">
+              <Field
+                label="Special Instructions"
+                className="dbm-span-2"
+                required={specialInstructionsRequired}
+                error={fieldErrors.specialInstructions}
+                invalid={!!fieldErrors.specialInstructions}
+              >
                 <input
                   data-testid="dbm-special-instructions"
                   type="text"
                   value={form.specialInstructions}
-                  onChange={(e) => setField('specialInstructions', e.target.value)}
+                  aria-invalid={!!fieldErrors.specialInstructions}
+                  onChange={(e) =>
+                    setField('specialInstructions', e.target.value)
+                  }
                 />
               </Field>
             </div>
@@ -681,6 +734,7 @@ export function DbmWorkOrderCreatePage() {
             className="dbm-btn dbm-btn-secondary"
             data-testid="dbm-cancel"
             disabled={isSaving}
+            onClick={handleCancelClick}
           >
             Cancel
           </button>
@@ -704,6 +758,44 @@ export function DbmWorkOrderCreatePage() {
           </button>
         </footer>
       </form>
+
+      {cancelConfirmOpen && (
+        <div
+          className="dbm-confirm-overlay"
+          role="presentation"
+          data-testid="dbm-cancel-confirm-overlay"
+        >
+          <div
+            className="dbm-confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dbm-cancel-confirm-title"
+            data-testid="dbm-cancel-confirm-dialog"
+          >
+            <p id="dbm-cancel-confirm-title" className="dbm-confirm-message">
+              Unsaved changes will be lost. Do you want to continue?
+            </p>
+            <div className="dbm-confirm-actions">
+              <button
+                type="button"
+                className="dbm-btn dbm-btn-secondary"
+                data-testid="dbm-cancel-confirm-no"
+                onClick={handleCancelConfirmNo}
+              >
+                No
+              </button>
+              <button
+                type="button"
+                className="dbm-btn dbm-btn-primary"
+                data-testid="dbm-cancel-confirm-yes"
+                onClick={handleCancelConfirmYes}
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -714,6 +806,8 @@ function Field({
   className,
   error,
   invalid,
+  hint,
+  hintTestId,
   children,
 }: {
   label: string
@@ -721,6 +815,8 @@ function Field({
   className?: string
   error?: string
   invalid?: boolean
+  hint?: string
+  hintTestId?: string
   children: ReactNode
 }) {
   return (
@@ -732,6 +828,11 @@ function Field({
         {required ? <span className="dbm-required"> *</span> : null}
       </span>
       {children}
+      {hint ? (
+        <span className="dbm-field-hint" data-testid={hintTestId}>
+          {hint}
+        </span>
+      ) : null}
       {error ? (
         <span className="dbm-field-error" role="alert">
           {error}

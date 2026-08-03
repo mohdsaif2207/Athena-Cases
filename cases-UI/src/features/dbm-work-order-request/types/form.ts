@@ -31,17 +31,6 @@ export type DbmCreateFormState = {
   totalRecordsUpdated: string
 }
 
-/** Keys that participate in mandatory create validation. */
-export type DbmMandatoryField =
-  | 'vendor'
-  | 'requestedDueDate'
-  | 'priority'
-  | 'subject'
-  | 'status'
-  | 'transferType'
-  | 'returnFileExpected'
-  | 'clientId'
-
 export const DEFAULT_DBM_CREATE_FORM: DbmCreateFormState = {
   vendor: '',
   caseOwner: 'Logged-in user',

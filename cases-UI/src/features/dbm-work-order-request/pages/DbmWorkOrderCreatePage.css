@@ -91,9 +91,49 @@
   margin-top: 4px;
 }
 
+.dbm-field-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dbm-muted);
+  line-height: 1.35;
+}
+
 .dbm-btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.dbm-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(11, 31, 74, 0.45);
+}
+
+.dbm-confirm-dialog {
+  width: min(420px, 100%);
+  background: var(--dbm-white);
+  border: 1px solid var(--dbm-border);
+  box-shadow: 0 8px 24px rgba(11, 31, 74, 0.18);
+  padding: 20px;
+}
+
+.dbm-confirm-message {
+  margin: 0 0 18px;
+  color: var(--dbm-text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.dbm-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .dbm-section {
