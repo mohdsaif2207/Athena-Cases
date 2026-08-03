@@ -147,6 +147,50 @@
 
 .athena-tab:not(.is-inert):hover {
   filter: brightness(1.05);
+  cursor: pointer;
+}
+
+.athena-tab-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.athena-tab--menu {
+  cursor: pointer;
+  font: inherit;
+}
+
+.athena-tab--menu.is-open,
+.athena-tab--menu.is-active {
+  background: var(--athena-navy);
+  border-color: var(--athena-navy);
+}
+
+.athena-tab-menu__panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 40;
+  min-width: 160px;
+  margin-top: 0;
+  background: #2a3558;
+  border: 1px solid #1f2740;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.athena-tab-menu__item {
+  display: block;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.athena-tab-menu__item:hover,
+.athena-tab-menu__item.is-active {
+  background: #e85a3c;
 }
 
 .athena-other-links {

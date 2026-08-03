@@ -40,7 +40,8 @@ public class WorkflowServiceImpl implements WorkflowService {
     @Override
     @Transactional
     public WorkflowRef start(StartWorkflowCommand command) {
-        requireWfView();
+        // Called as a side-effect of case create; list/get still require WF_VIEW + receiving team.
+        currentUserService.requirePrincipal();
         CaseEntity caseEntity = caseRepository.findById(command.caseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Case", String.valueOf(command.caseId())));
         TeamEntity team = teamRepository.findByCode(command.receiverTeamCode())

@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { AdminDashboardPage } from '@/features/admin/pages/AdminDashboardPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { BillingCaseCreatePage } from '@/features/cases/pages/BillingCaseCreatePage'
 import { CasesDashboardPlaceholder } from '@/features/cases/pages/CasesDashboardPlaceholder'
@@ -15,6 +16,14 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <CasesDashboardPlaceholder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/cases"
             element={
               <ProtectedRoute>
@@ -22,6 +31,16 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/utilities"
+            element={
+              <ProtectedRoute>
+                <AdminDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/user-management" element={<Navigate to="/utilities" replace />} />
+          <Route path="/admin" element={<Navigate to="/utilities" replace />} />
           <Route
             path="/cases/new/dbm"
             element={
@@ -46,8 +65,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/" element={<Navigate to="/cases" replace />} />
-          <Route path="*" element={<Navigate to="/cases" replace />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

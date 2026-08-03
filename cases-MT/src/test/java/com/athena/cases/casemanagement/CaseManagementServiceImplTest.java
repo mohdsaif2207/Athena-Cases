@@ -20,6 +20,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.athena.cases.notification.NotificationService;
+import com.athena.cases.workflow.WorkflowService;
 
 @ExtendWith(MockitoExtension.class)
 class CaseManagementServiceImplTest {
@@ -30,6 +32,10 @@ class CaseManagementServiceImplTest {
     private CaseTypeRepository caseTypeRepository;
     @Mock
     private CurrentUserService currentUserService;
+    @Mock
+    private WorkflowService workflowService;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private CaseManagementServiceImpl service;

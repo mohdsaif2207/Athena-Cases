@@ -4,9 +4,14 @@ import com.athena.cases.common.constants.PermissionCodes;
 import com.athena.cases.common.exception.ForbiddenException;
 import com.athena.cases.common.exception.ResourceNotFoundException;
 import com.athena.cases.identity.entity.CaseTypeEntity;
+import com.athena.cases.identity.entity.TeamEntity;
 import com.athena.cases.identity.repository.CaseTypeRepository;
+import com.athena.cases.notification.NotificationService;
+import com.athena.cases.notification.NotifyTeamCommand;
 import com.athena.cases.security.CurrentUserService;
 import com.athena.cases.security.UserPrincipal;
+import com.athena.cases.workflow.StartWorkflowCommand;
+import com.athena.cases.workflow.WorkflowService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -25,14 +30,20 @@ public class CaseManagementServiceImpl implements CaseManagementService {
     private final CaseRepository caseRepository;
     private final CaseTypeRepository caseTypeRepository;
     private final CurrentUserService currentUserService;
+    private final WorkflowService workflowService;
+    private final NotificationService notificationService;
 
     public CaseManagementServiceImpl(
             CaseRepository caseRepository,
             CaseTypeRepository caseTypeRepository,
-            CurrentUserService currentUserService) {
+            CurrentUserService currentUserService,
+            WorkflowService workflowService,
+            NotificationService notificationService) {
         this.caseRepository = caseRepository;
         this.caseTypeRepository = caseTypeRepository;
         this.currentUserService = currentUserService;
+        this.workflowService = workflowService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -64,9 +75,32 @@ public class CaseManagementServiceImpl implements CaseManagementService {
         entity.setVersion(1);
 
         CaseEntity saved = caseRepository.save(entity);
+        enqueueReceivingTeamWork(saved, caseType);
         log.info("case created - caseId={} caseNumber={} userId={}",
                 saved.getId(), saved.getCaseNumber(), principal.getUserId());
         return toRef(saved);
+    }
+
+    /**
+     * After case save: create workflow + notification rows for each receiving team of the case type.
+     * Queues remain visible only to users with WF_VIEW/NOTIF_VIEW and matching receiving-team scope.
+     */
+    private void enqueueReceivingTeamWork(CaseEntity saved, CaseTypeEntity caseType) {
+        for (TeamEntity team : caseType.getReceivingTeams()) {
+            if (!team.isActive()) {
+                continue;
+            }
+            workflowService.start(new StartWorkflowCommand(saved.getId(), team.getCode(), "Pending Assignment"));
+            notificationService.notifyTeam(new NotifyTeamCommand(
+                    saved.getId(),
+                    team.getCode(),
+                    "New case " + saved.getCaseNumber() + " assigned to " + team.getName(),
+                    "/cases"));
+            log.info(
+                    "case save enqueued workflow/notification - caseId={} receivingTeam={}",
+                    saved.getId(),
+                    team.getCode());
+        }
     }
 
     @Override

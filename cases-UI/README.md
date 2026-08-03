@@ -17,7 +17,14 @@ npm run dev
    - Username: `fm_admin`
    - Password: `FM@Admin123`
 
-Successful login redirects to the Cases Dashboard placeholder.
+   Cases module users (seeded when `app.default.admin.seed-enabled=true`):
+   | Username | Password             | Display | Case type (New Case) | Teams | Home queues |
+   |----------|----------------------|---------|----------------------|-------|-------------|
+   | charan   | FranklinCharan@123   | MTcharan | Billing only | Billing initiating + receiving scope | Hidden (no WF/NOTIF perm) |
+   | saif     | FranklinSaif@123     | MTsaif | DBM only | Client Success, Client Analyst + DBM receiving | Hidden (no WF/NOTIF; grant later in Utilities) |
+   | umar     | FranklinUmar@123     | MTumar | ExRT only | ExRT initiating + receiving | Shown (receiving + WF/NOTIF) |
+
+Successful login redirects to the Home screen.
 
 Optional: copy `.env.example` to `.env.development` and set `VITE_API_BASE_URL`.  
 If unset, the Vite dev proxy forwards `/api` to `http://localhost:8080`.
