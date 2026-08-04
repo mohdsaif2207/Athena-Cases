@@ -1,13 +1,20 @@
-import { LOOKUP_OPTIONS } from '@/features/cases/mock/casesMockData'
 import type { AdvancedFilterState } from '@/features/cases/types'
+
+export interface AdvancedFilterOptions {
+  carriers: string[]
+  priorities: string[]
+  assignees: string[]
+  frequencies: string[]
+}
 
 interface CasesAdvancedFiltersProps {
   open: boolean
   value: AdvancedFilterState
+  options: AdvancedFilterOptions
   onChange: (next: AdvancedFilterState) => void
 }
 
-export function CasesAdvancedFilters({ open, value, onChange }: CasesAdvancedFiltersProps) {
+export function CasesAdvancedFilters({ open, value, options, onChange }: CasesAdvancedFiltersProps) {
   if (!open) return null
 
   function setField<K extends keyof AdvancedFilterState>(key: K, fieldValue: AdvancedFilterState[K]) {
@@ -25,7 +32,7 @@ export function CasesAdvancedFilters({ open, value, onChange }: CasesAdvancedFil
             data-testid="adv-filter-carrier"
           >
             <option value="">All</option>
-            {LOOKUP_OPTIONS.carriers.map((c) => (
+            {options.carriers.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -41,7 +48,7 @@ export function CasesAdvancedFilters({ open, value, onChange }: CasesAdvancedFil
             data-testid="adv-filter-priority"
           >
             <option value="">All</option>
-            {LOOKUP_OPTIONS.priorities.map((p) => (
+            {options.priorities.map((p) => (
               <option key={p} value={p}>
                 {p}
               </option>
@@ -57,7 +64,7 @@ export function CasesAdvancedFilters({ open, value, onChange }: CasesAdvancedFil
             data-testid="adv-filter-assigned-to"
           >
             <option value="">All</option>
-            {LOOKUP_OPTIONS.assignees.map((a) => (
+            {options.assignees.map((a) => (
               <option key={a} value={a}>
                 {a}
               </option>
@@ -84,7 +91,7 @@ export function CasesAdvancedFilters({ open, value, onChange }: CasesAdvancedFil
             data-testid="adv-filter-frequency"
           >
             <option value="">All</option>
-            {LOOKUP_OPTIONS.frequencies.map((f) => (
+            {options.frequencies.map((f) => (
               <option key={f} value={f}>
                 {f}
               </option>

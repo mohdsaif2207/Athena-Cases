@@ -51,7 +51,7 @@ export function CasesToolbar({
         data-testid="cases-advanced-filters"
         aria-expanded={advancedOpen}
       >
-        Show Advance Search
+        Advanced Filters
       </button>
       <button
         type="button"
@@ -68,9 +68,6 @@ export function CasesToolbar({
         data-testid="cases-configure-columns"
       >
         Configure Columns
-      </button>
-      <button type="button" className="cases-action-btn is-disabled" disabled data-testid="cases-attachments">
-        Attachments
       </button>
     </div>
   )

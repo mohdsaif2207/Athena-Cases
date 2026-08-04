@@ -34,6 +34,10 @@ export function CasesDashboardPlaceholder() {
   const location = useLocation()
   const isHome = location.pathname === '/home'
   const welcomeName = user?.displayName?.trim() || 'User'
+  const permissions = user?.permissions ?? []
+  const canAccessCases = ['CASES_VIEW', 'CASES_ACCESS', 'CASES_CREATE', 'CASES_EDIT'].some((p) =>
+    permissions.includes(p),
+  )
 
   return (
     <div className="athena-shell" data-testid="cases-dashboard-placeholder">
@@ -73,6 +77,13 @@ export function CasesDashboardPlaceholder() {
               )
             }
             if (tab === 'Cases') {
+              if (!canAccessCases) {
+                return (
+                  <span key={tab} className="athena-tab is-inert" title="Requires Cases Access permission">
+                    {tab}
+                  </span>
+                )
+              }
               return (
                 <NavLink
                   key={tab}

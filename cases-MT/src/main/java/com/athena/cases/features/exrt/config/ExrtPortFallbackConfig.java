@@ -8,9 +8,11 @@ import com.athena.cases.notification.NotificationQueueItem;
 import com.athena.cases.notification.NotificationService;
 import com.athena.cases.notification.NotifyTeamCommand;
 import com.athena.cases.notification.NotifyUserCommand;
+import com.athena.cases.notification.UpdateNotificationCommand;
 import com.athena.cases.security.CurrentUserService;
 import com.athena.cases.security.UserPrincipal;
 import com.athena.cases.workflow.StartWorkflowCommand;
+import com.athena.cases.workflow.UpdateWorkflowCommand;
 import com.athena.cases.workflow.WorkflowQueueItem;
 import com.athena.cases.workflow.WorkflowRef;
 import com.athena.cases.workflow.WorkflowService;
@@ -102,6 +104,11 @@ public class ExrtPortFallbackConfig {
             public List<WorkflowQueueItem> listAuthorizedQueue() {
                 return List.of();
             }
+
+            @Override
+            public WorkflowQueueItem updateQueueItem(Long workflowId, UpdateWorkflowCommand command) {
+                throw new UnsupportedOperationException("Dev WorkflowService fallback cannot update queue items");
+            }
         };
     }
 
@@ -123,6 +130,12 @@ public class ExrtPortFallbackConfig {
             @Override
             public List<NotificationQueueItem> listAuthorizedQueue() {
                 return List.of();
+            }
+
+            @Override
+            public NotificationQueueItem updateQueueItem(Long notificationId, UpdateNotificationCommand command) {
+                throw new UnsupportedOperationException(
+                        "Dev NotificationService fallback cannot update queue items");
             }
         };
     }

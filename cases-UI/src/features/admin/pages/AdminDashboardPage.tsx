@@ -746,8 +746,10 @@ function ManageUsersPage({ onToast }: { onToast: (m: string) => void }) {
           <Field label={creating ? 'Password' : 'Password (optional)'}>
             <input
               type="password"
+              autoComplete="new-password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder={creating ? '' : 'Leave blank to keep current password'}
             />
           </Field>
           <Field label="Status">

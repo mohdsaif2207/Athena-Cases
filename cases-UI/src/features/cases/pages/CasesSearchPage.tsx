@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { fetchCases } from '@/features/cases/api/casesApi'
-import type { CaseTypeOption } from '@/features/cases/api/lookupApi'
+import { fetchCases, updateCase } from '@/features/cases/api/casesApi'
+import { fetchAuthorizedCaseTypes, type CaseTypeOption } from '@/features/cases/api/lookupApi'
 import { CaseDetailsModal } from '@/features/cases/components/CaseDetailsModal'
 import { CasesAdvancedFilters } from '@/features/cases/components/CasesAdvancedFilters'
 import { CasesColumnConfig } from '@/features/cases/components/CasesColumnConfig'
@@ -13,11 +13,13 @@ import { NewCaseTypeModal } from '@/features/cases/components/NewCaseTypeModal'
 import {
   EMPTY_ADVANCED_FILTERS,
   EMPTY_COLUMN_FILTERS,
+  LOOKUP_OPTIONS,
 } from '@/features/cases/mock/casesMockData'
 import {
   loadColumnPreferences,
-  resetColumnPreferences,
-  saveColumnPreferences,
+  loadColumnPreferencesFromProfile,
+  resetColumnPreferencesOnProfile,
+  saveColumnPreferencesToProfile,
 } from '@/features/cases/utils/columnPrefs'
 import { exportCasesToExcel } from '@/features/cases/utils/exportCasesExcel'
 import { applyCaseFilters, paginate } from '@/features/cases/utils/filterCases'
@@ -32,6 +34,12 @@ import type {
 import './CasesSearchPage.css'
 
 const PAGE_SIZE = 10
+
+function uniqueSorted(values: string[]): string[] {
+  return Array.from(new Set(values.map((v) => v.trim()).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b),
+  )
+}
 
 export function CasesSearchPage() {
   const { user } = useAuth()
@@ -96,6 +104,16 @@ export function CasesSearchPage() {
   }, [load])
 
   useEffect(() => {
+    let cancelled = false
+    void loadColumnPreferencesFromProfile().then((prefs) => {
+      if (!cancelled) setColumnPrefs(prefs)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
     const state = location.state as
       | { dbmCreateSuccess?: boolean; caseNumber?: string }
       | null
@@ -113,6 +131,27 @@ export function CasesSearchPage() {
     [allCases, columnFilters, advancedFilters],
   )
 
+  const advancedOptions = useMemo(
+    () => ({
+      carriers: uniqueSorted(allCases.map((c) => c.carrier)),
+      priorities: LOOKUP_OPTIONS.priorities,
+      assignees: uniqueSorted(allCases.map((c) => c.assignedTo)),
+      frequencies: uniqueSorted(allCases.map((c) => c.frequency)),
+    }),
+    [allCases],
+  )
+
+  const gridFilterOptions = useMemo(
+    () => ({
+      caseTypes: uniqueSorted(allCases.map((c) => c.caseType)),
+      statuses: uniqueSorted([
+        ...LOOKUP_OPTIONS.statuses,
+        ...allCases.map((c) => c.caseStatus),
+      ]),
+    }),
+    [allCases],
+  )
+
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize) || 1)
   const safePage = Math.min(page, pageCount - 1)
   const pageRows = paginate(filtered, safePage, pageSize)
@@ -121,10 +160,11 @@ export function CasesSearchPage() {
     if (page > pageCount - 1) setPage(Math.max(0, pageCount - 1))
   }, [page, pageCount])
 
-  function clearAll() {
+  async function clearAll() {
     setColumnFilters({ ...EMPTY_COLUMN_FILTERS })
     setAdvancedFilters({ ...EMPTY_ADVANCED_FILTERS })
     setPage(0)
+    await load()
   }
 
   function showToast(message: string) {
@@ -142,6 +182,19 @@ export function CasesSearchPage() {
     navigate(path)
   }
 
+  async function handleNewCase() {
+    try {
+      const types = await fetchAuthorizedCaseTypes()
+      if (types.length === 1) {
+        handleCaseTypeSelected(types[0])
+        return
+      }
+      setCaseTypeModalOpen(true)
+    } catch {
+      setCaseTypeModalOpen(true)
+    }
+  }
+
   return (
     <div className="cases-search" data-testid="cases-search-page">
       <CasesToolbar
@@ -150,7 +203,9 @@ export function CasesSearchPage() {
         columnsOpen={columnsOpen}
         canCreate={canCreate}
         canExport={canExport}
-        onClearAll={clearAll}
+        onClearAll={() => {
+          void clearAll()
+        }}
         onToggleAdvanced={() => {
           setAdvancedOpen((v) => !v)
           setColumnsOpen(false)
@@ -163,12 +218,15 @@ export function CasesSearchPage() {
           exportCasesToExcel(filtered)
           showToast(`Exported ${filtered.length} case(s) to Excel.`)
         }}
-        onNewCase={() => setCaseTypeModalOpen(true)}
+        onNewCase={() => {
+          void handleNewCase()
+        }}
       />
 
       <CasesAdvancedFilters
         open={advancedOpen}
         value={advancedFilters}
+        options={advancedOptions}
         onChange={(next) => {
           setAdvancedFilters(next)
           setPage(0)
@@ -199,6 +257,7 @@ export function CasesSearchPage() {
                 rows={pageRows}
                 columnOrder={columnPrefs}
                 columnFilters={columnFilters}
+                filterOptions={gridFilterOptions}
                 onColumnFilterChange={(key, value) => {
                   setColumnFilters((prev) => ({ ...prev, [key]: value }))
                   setPage(0)
@@ -234,14 +293,23 @@ export function CasesSearchPage() {
           onChange={setColumnPrefs}
           onClose={() => setColumnsOpen(false)}
           onSave={() => {
-            saveColumnPreferences(columnPrefs)
-            setPrefsSavedMessage('Column preferences saved.')
-            window.setTimeout(() => setPrefsSavedMessage(null), 2500)
+            void (async () => {
+              try {
+                await saveColumnPreferencesToProfile(columnPrefs)
+                setPrefsSavedMessage('Column preferences saved to your profile.')
+              } catch {
+                setPrefsSavedMessage('Unable to save preferences to profile. Try again.')
+              }
+              window.setTimeout(() => setPrefsSavedMessage(null), 2500)
+            })()
           }}
           onReset={() => {
-            setColumnPrefs(resetColumnPreferences())
-            setPrefsSavedMessage('Columns reset to default.')
-            window.setTimeout(() => setPrefsSavedMessage(null), 2500)
+            void (async () => {
+              const defaults = await resetColumnPreferencesOnProfile()
+              setColumnPrefs(defaults)
+              setPrefsSavedMessage('Columns reset to default.')
+              window.setTimeout(() => setPrefsSavedMessage(null), 2500)
+            })()
           }}
         />
       </div>
@@ -269,11 +337,17 @@ export function CasesSearchPage() {
           setDetailMode(null)
           setSelected(null)
         }}
-        onSave={(next) => {
-          setAllCases((prev) => prev.map((c) => (c.id === next.id ? next : c)))
-          setDetailMode(null)
-          setSelected(null)
-          showToast(`Case ${next.caseId} updated.`)
+        onSave={async (next) => {
+          try {
+            await updateCase(next)
+            setAllCases((prev) => prev.map((c) => (c.id === next.id ? next : c)))
+            setDetailMode(null)
+            setSelected(null)
+            showToast(`Case ${next.caseId} updated.`)
+            void load()
+          } catch {
+            showToast(`Unable to save case ${next.caseId}.`)
+          }
         }}
       />
 

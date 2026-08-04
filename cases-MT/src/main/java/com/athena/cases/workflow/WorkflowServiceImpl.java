@@ -7,6 +7,8 @@ import com.athena.cases.common.exception.ForbiddenException;
 import com.athena.cases.common.exception.ResourceNotFoundException;
 import com.athena.cases.identity.entity.TeamEntity;
 import com.athena.cases.identity.repository.TeamRepository;
+import com.athena.cases.notification.NotificationEntity;
+import com.athena.cases.notification.NotificationRepository;
 import com.athena.cases.security.CurrentUserService;
 import com.athena.cases.security.UserPrincipal;
 import java.time.Instant;
@@ -25,16 +27,19 @@ public class WorkflowServiceImpl implements WorkflowService {
     private final CaseRepository caseRepository;
     private final TeamRepository teamRepository;
     private final CurrentUserService currentUserService;
+    private final NotificationRepository notificationRepository;
 
     public WorkflowServiceImpl(
             WorkflowRepository workflowRepository,
             CaseRepository caseRepository,
             TeamRepository teamRepository,
-            CurrentUserService currentUserService) {
+            CurrentUserService currentUserService,
+            NotificationRepository notificationRepository) {
         this.workflowRepository = workflowRepository;
         this.caseRepository = caseRepository;
         this.teamRepository = teamRepository;
         this.currentUserService = currentUserService;
+        this.notificationRepository = notificationRepository;
     }
 
     @Override
@@ -111,6 +116,70 @@ public class WorkflowServiceImpl implements WorkflowService {
         return workflowRepository.findAuthorized(teamIds, false).stream()
                 .map(this::toQueueItem)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public WorkflowQueueItem updateQueueItem(Long workflowId, UpdateWorkflowCommand command) {
+        requireWfView();
+        WorkflowEntity entity = workflowRepository.findById(workflowId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workflow", String.valueOf(workflowId)));
+        assertReceivingTeamAccess(entity.getReceivingTeamId());
+
+        if (command.status() != null && !command.status().isBlank()) {
+            entity.setStatus(command.status().trim());
+        }
+        if (command.decision() != null) {
+            entity.setDecision(command.decision().trim());
+        }
+        if (command.priority() != null && !command.priority().isBlank()) {
+            entity.setPriority(command.priority().trim());
+        }
+        if (command.owner() != null) {
+            entity.setOwnerName(command.owner().trim());
+        }
+        entity.setUpdatedAt(Instant.now());
+        entity.setUpdatedBy(currentUserService.requirePrincipal().getUsername());
+
+        WorkflowEntity saved = workflowRepository.save(entity);
+        syncCaseFromWorkflow(saved);
+        syncNotificationsFromWorkflow(saved);
+        log.info("workflow queue updated - workflowId={} status={} user={}",
+                saved.getId(), saved.getStatus(), entity.getUpdatedBy());
+        return toQueueItem(saved);
+    }
+
+    private void syncCaseFromWorkflow(WorkflowEntity workflow) {
+        caseRepository.findById(workflow.getCaseId()).ifPresent(caseEntity -> {
+            if (workflow.getStatus() != null && !workflow.getStatus().isBlank()) {
+                caseEntity.setCaseStatus(workflow.getStatus());
+            }
+            if (workflow.getPriority() != null && !workflow.getPriority().isBlank()) {
+                caseEntity.setPriority(workflow.getPriority());
+            }
+            if (workflow.getOwnerName() != null && !workflow.getOwnerName().isBlank()) {
+                caseEntity.setAssignedTo(workflow.getOwnerName());
+            }
+            caseEntity.setUpdatedAt(Instant.now());
+            caseEntity.setUpdatedBy(currentUserService.requirePrincipal().getUsername());
+            caseRepository.save(caseEntity);
+        });
+    }
+
+    private void syncNotificationsFromWorkflow(WorkflowEntity workflow) {
+        Instant now = Instant.now();
+        String actor = currentUserService.requirePrincipal().getUsername();
+        List<NotificationEntity> notifications =
+                notificationRepository.findByCaseIdOrderByReceivedAtDesc(workflow.getCaseId());
+        for (NotificationEntity n : notifications) {
+            n.setMessage("Case queue update — workflow status: " + nullToEmpty(workflow.getStatus())
+                    + ", priority: " + nullToEmpty(workflow.getPriority()));
+            n.setUpdatedAt(now);
+            n.setUpdatedBy(actor);
+        }
+        if (!notifications.isEmpty()) {
+            notificationRepository.saveAll(notifications);
+        }
     }
 
     private WorkflowQueueItem toQueueItem(WorkflowEntity w) {

@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { fetchNotifications } from '@/features/cases/api/notificationApi'
+import { fetchNotifications, updateNotification } from '@/features/cases/api/notificationApi'
 import { CasesPagination } from '@/features/cases/components/CasesPagination'
 import { QueueEditButton, QueueViewButton } from '@/features/cases/components/QueueActionButtons'
 import { QueueDetailModal } from '@/features/cases/components/QueueDetailModal'
 import { exportNotificationsToExcel } from '@/features/cases/utils/exportQueueExcel'
 import { paginate } from '@/features/cases/utils/filterCases'
 import { canEditQueueRecord } from '@/features/cases/utils/queueEditAccess'
-import type { NotificationRecord, QueueDetailFields } from '@/features/cases/types'
+import type { NotificationRecord, QueueDetailFields, QueueDetailMode } from '@/features/cases/types'
 
 const PAGE_SIZE = 10
 
@@ -39,30 +39,29 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [detailMode, setDetailMode] = useState<QueueDetailMode>('view')
   const [detailTitle, setDetailTitle] = useState('View Notification Details')
   const [detailFields, setDetailFields] = useState<QueueDetailFields | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const data = await fetchNotifications()
-        if (!cancelled) setRows(data)
-      } catch {
-        if (!cancelled) {
-          setError('Unable to load notification queue.')
-          setRows([])
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-    return () => {
-      cancelled = true
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await fetchNotifications()
+      setRows(data)
+    } catch {
+      setError('Unable to load notification queue.')
+      setRows([])
+    } finally {
+      setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
 
   const filtered = useMemo(
     () =>
@@ -88,20 +87,26 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
     setPage(0)
   }
 
-  function openDetail(row: NotificationRecord, mode: 'view' | 'edit') {
+  function openDetail(row: NotificationRecord, mode: QueueDetailMode) {
     // Deep links (stored in details) open the case page — e.g. Billing view route.
     if (mode === 'view' && row.details?.startsWith('/')) {
       navigate(row.details)
       return
     }
+    setDetailMode(mode)
+    setSaveError(null)
     setDetailTitle(mode === 'view' ? 'View Notification Details' : 'Edit Notification Details')
     setDetailFields({
+      id: row.id,
       messageId: row.messageId,
       messageName: row.messageName,
       messageKey: row.messageKey,
       message: row.message,
+      status: '',
+      decision: '',
       priority: row.priority,
       owner: row.owner,
+      details: row.details,
       receivedDate: row.receivedDate,
       updatedDate: row.updatedDate,
       senderSystem: 'ATHENA',
@@ -109,6 +114,26 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
       senderUserGroup: '',
     })
     setDetailOpen(true)
+  }
+
+  async function handleSave(next: QueueDetailFields) {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const updated = await updateNotification(next.id, {
+        messageName: next.messageName,
+        message: next.message,
+        details: next.details,
+      })
+      setRows((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+      setDetailOpen(false)
+      setDetailFields(null)
+      onToast(`Notification ${updated.notificationId} updated.`)
+    } catch {
+      setSaveError('Unable to save notification changes. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -136,15 +161,6 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
           }}
         >
           Clear Filters
-        </button>
-        <button
-          type="button"
-          className="cases-action-btn is-disabled"
-          disabled
-          title="Coming soon"
-          data-testid="notification-reply"
-        >
-          Reply
         </button>
       </div>
 
@@ -250,11 +266,17 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
       <QueueDetailModal
         open={detailOpen}
         title={detailTitle}
+        mode={detailMode}
+        kind="notification"
         fields={detailFields}
+        saving={saving}
+        error={saveError}
         onClose={() => {
           setDetailOpen(false)
           setDetailFields(null)
+          setSaveError(null)
         }}
+        onSave={handleSave}
       />
     </section>
   )

@@ -10,6 +10,8 @@ public interface WorkflowRepository extends JpaRepository<WorkflowEntity, Long> 
 
     Optional<WorkflowEntity> findFirstByCaseIdOrderByReceivedAtDesc(Long caseId);
 
+    List<WorkflowEntity> findByCaseIdOrderByReceivedAtDesc(Long caseId);
+
     @Query("""
             SELECT w FROM WorkflowEntity w
             WHERE (:teamIdsEmpty = true OR w.receivingTeamId IN :teamIds)

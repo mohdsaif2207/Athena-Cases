@@ -116,13 +116,20 @@ export interface NotificationRecord {
 }
 
 /** Fields shown in Home queue View/Edit detail popup. */
+export type QueueDetailMode = 'view' | 'edit'
+export type QueueDetailKind = 'workflow' | 'notification'
+
 export interface QueueDetailFields {
+  id: number
   messageId: string
   messageName: string
   messageKey: string
   message: string
+  status: string
+  decision: string
   priority: string
   owner: string
+  details: string
   receivedDate: string
   updatedDate: string
   senderSystem: string

@@ -7,6 +7,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface NotificationRepository extends JpaRepository<NotificationEntity, Long> {
 
+    List<NotificationEntity> findByCaseIdOrderByReceivedAtDesc(Long caseId);
+
     @Query("""
             SELECT n FROM NotificationEntity n
             WHERE (:teamIdsEmpty = true OR n.receivingTeamId IN :teamIds)

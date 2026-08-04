@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { FranklinMadisonLogo } from '@/components/branding/FranklinMadisonLogo'
 import { useAuth } from '@/contexts/AuthContext'
 import { getErrorMessage } from '@/lib/errors'
@@ -146,20 +146,6 @@ export function LoginPage() {
                   {passwordError}
                 </p>
               ) : null}
-            </div>
-
-            <div className="login-form__meta">
-              <Link
-                to="/forgot-password"
-                className="login-form__forgot"
-                data-testid="login-forgot-password"
-                onClick={(e) => {
-                  e.preventDefault()
-                  setFormError('Forgot Password is not available yet. Please contact your administrator.')
-                }}
-              >
-                Forgot Password?
-              </Link>
             </div>
 
             <button

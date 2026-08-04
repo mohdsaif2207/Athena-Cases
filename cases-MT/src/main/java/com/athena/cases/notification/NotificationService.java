@@ -13,4 +13,7 @@ public interface NotificationService {
 
     /** Queue rows visible to the caller's receiving teams (requires NOTIF_VIEW). */
     List<NotificationQueueItem> listAuthorizedQueue();
+
+    /** Updates a queue row when the caller is on that notification's receiving team. */
+    NotificationQueueItem updateQueueItem(Long notificationId, UpdateNotificationCommand command);
 }

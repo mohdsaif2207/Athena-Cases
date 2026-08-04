@@ -23,7 +23,22 @@ interface NotificationQueueItemDto {
 
 export async function fetchNotifications(): Promise<NotificationRecord[]> {
   const { data } = await apiClient.get<ApiSuccess<NotificationQueueItemDto[]>>('/api/v1/notifications')
-  return (data.data ?? []).map((dto) => ({
+  return (data.data ?? []).map(mapNotification)
+}
+
+export async function updateNotification(
+  id: number,
+  body: { messageName: string; message: string; details: string },
+): Promise<NotificationRecord> {
+  const { data } = await apiClient.put<ApiSuccess<NotificationQueueItemDto>>(
+    `/api/v1/notifications/${id}`,
+    body,
+  )
+  return mapNotification(data.data)
+}
+
+function mapNotification(dto: NotificationQueueItemDto): NotificationRecord {
+  return {
     id: dto.id,
     notificationId: dto.notificationId,
     caseId: dto.caseId,
@@ -39,7 +54,7 @@ export async function fetchNotifications(): Promise<NotificationRecord[]> {
     priority: dto.priority ?? '',
     owner: dto.owner ?? '',
     receivingTeamCode: dto.receivingTeamCode ?? '',
-  }))
+  }
 }
 
 function formatReceived(iso: string): string {

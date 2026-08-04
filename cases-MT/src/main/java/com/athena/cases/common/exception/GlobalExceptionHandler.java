@@ -66,6 +66,13 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("VALIDATION_ERROR", message, null, requestId(), details));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("bad request - message={}", ex.getMessage());
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of("VALIDATION_ERROR", ex.getMessage(), null, requestId(), List.of()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
         log.error("unhandled error - path={}", request.getRequestURI(), ex);

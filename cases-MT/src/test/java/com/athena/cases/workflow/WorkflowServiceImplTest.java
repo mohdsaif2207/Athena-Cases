@@ -33,6 +33,8 @@ class WorkflowServiceImplTest {
     private TeamRepository teamRepository;
     @Mock
     private CurrentUserService currentUserService;
+    @Mock
+    private com.athena.cases.notification.NotificationRepository notificationRepository;
 
     @InjectMocks
     private WorkflowServiceImpl service;

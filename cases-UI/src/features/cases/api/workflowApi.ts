@@ -25,7 +25,19 @@ interface WorkflowQueueItemDto {
 
 export async function fetchWorkflows(): Promise<WorkflowRecord[]> {
   const { data } = await apiClient.get<ApiSuccess<WorkflowQueueItemDto[]>>('/api/v1/workflows')
-  return (data.data ?? []).map((dto) => ({
+  return (data.data ?? []).map(mapWorkflow)
+}
+
+export async function updateWorkflow(
+  id: number,
+  body: { status: string; decision: string; priority: string; owner: string },
+): Promise<WorkflowRecord> {
+  const { data } = await apiClient.put<ApiSuccess<WorkflowQueueItemDto>>(`/api/v1/workflows/${id}`, body)
+  return mapWorkflow(data.data)
+}
+
+function mapWorkflow(dto: WorkflowQueueItemDto): WorkflowRecord {
+  return {
     id: dto.id,
     workflowId: dto.workflowId,
     caseId: dto.caseId,
@@ -43,7 +55,7 @@ export async function fetchWorkflows(): Promise<WorkflowRecord[]> {
     logs: dto.logs ?? '',
     createdBy: dto.createdBy ?? '',
     receivingTeamCode: dto.receivingTeamCode ?? '',
-  }))
+  }
 }
 
 function formatReceived(iso: string): string {

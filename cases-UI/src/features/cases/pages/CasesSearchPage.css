@@ -705,6 +705,12 @@
   color: #1f2937;
 }
 
+.queue-detail-error {
+  margin: 8px 0 0;
+  color: #b11226;
+  font-size: 13px;
+}
+
 .queue-detail-row strong {
   font-weight: 700;
 }

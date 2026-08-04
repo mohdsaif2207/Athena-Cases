@@ -14,4 +14,7 @@ public interface WorkflowService {
 
     /** Queue rows visible to the caller's receiving teams (requires WF_VIEW). */
     List<WorkflowQueueItem> listAuthorizedQueue();
+
+    /** Updates a queue row when the caller is on that workflow's receiving team. */
+    WorkflowQueueItem updateQueueItem(Long workflowId, UpdateWorkflowCommand command);
 }

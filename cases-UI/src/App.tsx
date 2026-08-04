@@ -8,6 +8,7 @@ import { DbmWorkOrderCreatePage } from '@/features/dbm-work-order-request'
 import { ExrtRequestCreatePage } from '@/features/exrt-request'
 import { EXRT_ROUTE } from '@/features/exrt-request/theme/exrtTheme'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
+import { RequirePermission } from '@/routes/RequirePermission'
 import './App.css'
 
 export default function App() {
@@ -28,7 +29,9 @@ export default function App() {
             path="/cases"
             element={
               <ProtectedRoute>
-                <CasesDashboardPlaceholder />
+                <RequirePermission anyOf={['CASES_VIEW', 'CASES_ACCESS', 'CASES_CREATE', 'CASES_EDIT']}>
+                  <CasesDashboardPlaceholder />
+                </RequirePermission>
               </ProtectedRoute>
             }
           />

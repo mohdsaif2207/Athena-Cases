@@ -1,5 +1,4 @@
 import { DatePickerField } from '@/features/cases/components/DatePickerField'
-import { LOOKUP_OPTIONS } from '@/features/cases/mock/casesMockData'
 import {
   DATE_VALIDATION_MESSAGES,
   isDueBeforeCreated,
@@ -7,10 +6,16 @@ import {
 } from '@/features/cases/utils/dateFormat'
 import type { CaseColumnKey, CaseRecord, ColumnFilterState, ColumnPreference } from '@/features/cases/types'
 
+export interface CasesGridFilterOptions {
+  caseTypes: string[]
+  statuses: string[]
+}
+
 interface CasesGridProps {
   rows: CaseRecord[]
   columnOrder: ColumnPreference[]
   columnFilters: ColumnFilterState
+  filterOptions: CasesGridFilterOptions
   onColumnFilterChange: (key: keyof ColumnFilterState, value: string) => void
   canEdit: boolean
   onView: (row: CaseRecord) => void
@@ -21,6 +26,7 @@ export function CasesGrid({
   rows,
   columnOrder,
   columnFilters,
+  filterOptions,
   onColumnFilterChange,
   canEdit,
   onView,
@@ -49,7 +55,7 @@ export function CasesGrid({
           <tr className="cases-grid__filters">
             {visible.map((col) => (
               <th key={`f-${col.key}`}>
-                {renderFilter(col.key, columnFilters, onColumnFilterChange)}
+                {renderFilter(col.key, columnFilters, filterOptions, onColumnFilterChange)}
               </th>
             ))}
           </tr>
@@ -83,11 +89,13 @@ export function CasesGrid({
 function renderFilter(
   key: CaseColumnKey,
   columnFilters: ColumnFilterState,
+  filterOptions: CasesGridFilterOptions,
   onColumnFilterChange: (key: keyof ColumnFilterState, value: string) => void,
 ) {
   if (key === 'action') return null
 
   if (key === 'caseStatus' || key === 'caseType') {
+    const options = key === 'caseStatus' ? filterOptions.statuses : filterOptions.caseTypes
     return (
       <select
         value={columnFilters[key]}
@@ -96,7 +104,7 @@ function renderFilter(
         data-testid={`cases-filter-${key}`}
       >
         <option value="">All</option>
-        {(key === 'caseStatus' ? LOOKUP_OPTIONS.statuses : LOOKUP_OPTIONS.caseTypes).map((opt) => (
+        {options.map((opt) => (
           <option key={opt} value={opt}>
             {opt}
           </option>

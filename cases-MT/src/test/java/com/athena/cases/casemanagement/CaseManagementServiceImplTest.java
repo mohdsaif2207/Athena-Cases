@@ -39,6 +39,10 @@ class CaseManagementServiceImplTest {
     private NotificationService notificationService;
     @Mock
     private BusinessCaseIdService businessCaseIdService;
+    @Mock
+    private com.athena.cases.workflow.WorkflowRepository workflowRepository;
+    @Mock
+    private com.athena.cases.notification.NotificationRepository notificationRepository;
 
     @InjectMocks
     private CaseManagementServiceImpl service;

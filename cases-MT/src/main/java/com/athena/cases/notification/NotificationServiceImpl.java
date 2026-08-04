@@ -9,6 +9,7 @@ import com.athena.cases.identity.entity.TeamEntity;
 import com.athena.cases.identity.repository.TeamRepository;
 import com.athena.cases.security.CurrentUserService;
 import com.athena.cases.security.UserPrincipal;
+import com.athena.cases.workflow.WorkflowRepository;
 import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
@@ -25,16 +26,19 @@ public class NotificationServiceImpl implements NotificationService {
     private final CaseRepository caseRepository;
     private final TeamRepository teamRepository;
     private final CurrentUserService currentUserService;
+    private final WorkflowRepository workflowRepository;
 
     public NotificationServiceImpl(
             NotificationRepository notificationRepository,
             CaseRepository caseRepository,
             TeamRepository teamRepository,
-            CurrentUserService currentUserService) {
+            CurrentUserService currentUserService,
+            WorkflowRepository workflowRepository) {
         this.notificationRepository = notificationRepository;
         this.caseRepository = caseRepository;
         this.teamRepository = teamRepository;
         this.currentUserService = currentUserService;
+        this.workflowRepository = workflowRepository;
     }
 
     @Override
@@ -108,6 +112,57 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.findAuthorized(teamIds, false).stream()
                 .map(this::toQueueItem)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public NotificationQueueItem updateQueueItem(Long notificationId, UpdateNotificationCommand command) {
+        requireNotifView();
+        NotificationEntity entity = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification", String.valueOf(notificationId)));
+        assertReceivingTeamAccess(entity.getReceivingTeamId());
+
+        if (command.messageName() != null && !command.messageName().isBlank()) {
+            entity.setMessageName(command.messageName().trim());
+        }
+        if (command.message() != null && !command.message().isBlank()) {
+            entity.setMessage(command.message().trim());
+        }
+        if (command.details() != null) {
+            entity.setDetails(command.details().trim());
+        }
+        entity.setUpdatedAt(Instant.now());
+        entity.setUpdatedBy(currentUserService.requirePrincipal().getUsername());
+
+        NotificationEntity saved = notificationRepository.save(entity);
+        syncRelatedWorkflowMessage(saved);
+        log.info("notification queue updated - notificationId={} user={}",
+                saved.getId(), entity.getUpdatedBy());
+        return toQueueItem(saved);
+    }
+
+    private void syncRelatedWorkflowMessage(NotificationEntity notification) {
+        // Keep the latest workflow message name aligned when notification title/body changes.
+        workflowRepository.findFirstByCaseIdOrderByReceivedAtDesc(notification.getCaseId())
+                .ifPresent(w -> {
+                    if (notification.getMessageName() != null && !notification.getMessageName().isBlank()) {
+                        w.setMessageName(notification.getMessageName());
+                    }
+                    if (notification.getMessage() != null && !notification.getMessage().isBlank()) {
+                        w.setLogs(notification.getMessage());
+                    }
+                    w.setUpdatedAt(Instant.now());
+                    w.setUpdatedBy(currentUserService.requirePrincipal().getUsername());
+                    workflowRepository.save(w);
+                });
+    }
+
+    private void assertReceivingTeamAccess(Long receivingTeamId) {
+        TeamEntity team = teamRepository.findById(receivingTeamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Team", String.valueOf(receivingTeamId)));
+        if (!currentUserService.requirePrincipal().getReceivingTeamCodes().contains(team.getCode())) {
+            throw new ForbiddenException("Not authorized for receiving team " + team.getCode());
+        }
     }
 
     private NotificationQueueItem toQueueItem(NotificationEntity n) {

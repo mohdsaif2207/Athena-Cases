@@ -1,6 +1,6 @@
 import { apiClient } from '@/api/client'
 import type { ApiSuccess } from '@/api/types'
-import { formatAppDate } from '@/features/cases/utils/dateFormat'
+import { formatAppDate, parseAppDate } from '@/features/cases/utils/dateFormat'
 import type { CasePriority, CaseRecord, CaseStatus } from '@/features/cases/types'
 
 interface CaseListItemDto {
@@ -39,6 +39,23 @@ export async function fetchCases(): Promise<CaseRecord[]> {
       if (byUpdated !== 0) return byUpdated
       return b.createdDate.localeCompare(a.createdDate)
     })
+}
+
+export async function updateCase(record: CaseRecord): Promise<void> {
+  const due = parseAppDate(record.requestedDueDate)
+  await apiClient.put(`/api/v1/cases/${record.id}`, {
+    priority: record.priority,
+    status: record.caseStatus,
+    assignedTo: record.assignedTo || null,
+    parentCaseId: null,
+    version: null,
+    subject: record.subject,
+    description: record.description,
+    clientId: record.clientId,
+    requestedDueDate: due
+      ? `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`
+      : null,
+  })
 }
 
 function mapCase(dto: CaseListItemDto): CaseRecord {
