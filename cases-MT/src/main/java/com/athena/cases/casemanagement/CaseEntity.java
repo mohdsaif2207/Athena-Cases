@@ -58,6 +58,10 @@ public class CaseEntity extends AuditableEntity {
     @Column(name = "requested_due_date")
     private LocalDate requestedDueDate;
 
+    /** DBM Custom transfer type — requires DBM manager approval (LLD). */
+    @Column(name = "pending_dbm_approval", nullable = false)
+    private boolean pendingDbmApproval;
+
     public String getCaseNumber() {
         return caseNumber;
     }
@@ -184,5 +188,13 @@ public class CaseEntity extends AuditableEntity {
 
     public void setRequestedDueDate(LocalDate requestedDueDate) {
         this.requestedDueDate = requestedDueDate;
+    }
+
+    public boolean isPendingDbmApproval() {
+        return pendingDbmApproval;
+    }
+
+    public void setPendingDbmApproval(boolean pendingDbmApproval) {
+        this.pendingDbmApproval = pendingDbmApproval;
     }
 }

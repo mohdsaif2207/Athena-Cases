@@ -1,22 +1,24 @@
 /**
- * Temporary frontend access helpers until real auth/RBAC is wired.
- *
- * Replace {@link resolveIsDbmUser} with the authentication/authorization service
- * (JWT claims, role API, etc.) — do not push auth rules into the backend from here.
+ * DBM access helpers — uses JWT receiving-team codes from AuthContext.
+ * Receiving team {@code DBM_TEAM} matches seeded IAM (display name "DBM").
  */
 
-/** Flip this stub while developing; later: read role from the auth service. */
-const TEMP_IS_DBM_USER = true
+import { useAuth } from '@/contexts/AuthContext'
+import type { AuthenticatedUser } from '@/api/types'
 
-/**
- * Whether the current user may see DBM-only fields ("For DBM Use Only").
- * Easy swap point for the real authorization service.
- */
-export function resolveIsDbmUser(): boolean {
-  return TEMP_IS_DBM_USER
+/** Seeded receiving team code for DBM (must match backend {@code DbmConstants.RECEIVER_TEAM_DBM}). */
+export const DBM_RECEIVING_TEAM_CODE = 'DBM_TEAM'
+
+/** Whether the authenticated user is on the DBM receiving team (AC8). */
+export function resolveIsDbmUser(user: AuthenticatedUser | null | undefined): boolean {
+  const teams = user?.receivingTeams ?? []
+  return teams.some(
+    (code) => code.trim().toUpperCase() === DBM_RECEIVING_TEAM_CODE,
+  )
 }
 
-/** Hook-shaped accessor so call sites stay stable when auth becomes async. */
+/** Hook-shaped accessor so call sites stay stable. */
 export function useIsDbmUser(): boolean {
-  return resolveIsDbmUser()
+  const { user } = useAuth()
+  return resolveIsDbmUser(user)
 }

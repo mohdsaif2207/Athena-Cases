@@ -2,6 +2,7 @@ package com.athena.cases.features.dbm.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.athena.cases.common.constants.PermissionCodes;
 import com.athena.cases.features.dbm.dto.CreateDbmWorkOrderRequest;
 import com.athena.cases.features.dbm.dto.DbmWorkOrderResponse;
 import com.athena.cases.features.dbm.dto.UpdateDbmWorkOrderRequest;
@@ -31,6 +33,7 @@ public class DbmWorkOrderController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_" + PermissionCodes.CASES_CREATE + "')")
     public ResponseEntity<DbmWorkOrderResponse> create(
             @Valid @RequestBody CreateDbmWorkOrderRequest request) {
         DbmWorkOrderResponse created = dbmWorkOrderService.create(request);
@@ -38,11 +41,13 @@ public class DbmWorkOrderController {
     }
 
     @GetMapping("/{caseId}")
+    @PreAuthorize("hasAuthority('PERM_" + PermissionCodes.CASES_VIEW + "')")
     public ResponseEntity<DbmWorkOrderResponse> getByCaseId(@PathVariable Long caseId) {
         return ResponseEntity.ok(dbmWorkOrderService.getByCaseId(caseId));
     }
 
     @PutMapping("/{caseId}")
+    @PreAuthorize("hasAuthority('PERM_" + PermissionCodes.CASES_EDIT + "')")
     public ResponseEntity<DbmWorkOrderResponse> update(
             @PathVariable Long caseId,
             @Valid @RequestBody UpdateDbmWorkOrderRequest request) {

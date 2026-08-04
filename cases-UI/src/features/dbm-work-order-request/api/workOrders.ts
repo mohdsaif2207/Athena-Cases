@@ -14,3 +14,25 @@ export async function createDbmWorkOrder(
   )
   return response.data
 }
+
+/** GET /api/dbm/work-orders/{caseId} — load for view/edit. */
+export async function getDbmWorkOrder(
+  caseId: number,
+): Promise<DbmWorkOrderResponse> {
+  const response = await apiClient.get<DbmWorkOrderResponse>(
+    `/api/dbm/work-orders/${caseId}`,
+  )
+  return response.data
+}
+
+/** PUT /api/dbm/work-orders/{caseId} — update (triggers DBM team notification). */
+export async function updateDbmWorkOrder(
+  caseId: number,
+  payload: CreateDbmWorkOrderRequest,
+): Promise<DbmWorkOrderResponse> {
+  const response = await apiClient.put<DbmWorkOrderResponse>(
+    `/api/dbm/work-orders/${caseId}`,
+    payload,
+  )
+  return response.data
+}

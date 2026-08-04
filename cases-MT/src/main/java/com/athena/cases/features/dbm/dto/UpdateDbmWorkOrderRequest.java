@@ -3,6 +3,9 @@ package com.athena.cases.features.dbm.dto;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.athena.cases.features.dbm.DbmConstants;
+
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -50,4 +53,14 @@ public record UpdateDbmWorkOrderRequest(
         String dbmCompletionNotes,
         @PositiveOrZero Integer totalRecordsUpdated
 ) {
+    @AssertTrue(message = "Special Instructions is required when Transfer Type is Other (Requires Description)")
+    public boolean isSpecialInstructionsPresentWhenOther() {
+        if (transferType == null || transferType.isBlank()) {
+            return true;
+        }
+        if (!DbmConstants.TRANSFER_TYPE_OTHER.equalsIgnoreCase(transferType.trim())) {
+            return true;
+        }
+        return specialInstructions != null && !specialInstructions.isBlank();
+    }
 }

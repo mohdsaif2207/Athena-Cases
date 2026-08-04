@@ -50,6 +50,16 @@
   gap: 18px;
 }
 
+.dbm-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .dbm-lookup-status {
   display: flex;
   align-items: center;

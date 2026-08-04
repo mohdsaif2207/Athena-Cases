@@ -1,11 +1,15 @@
 import { useState, useEffect, type FormEvent, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import type { EventIdLookupItem } from '../api/lookups'
+import { getDbmWorkOrder } from '../api/workOrders'
 import { useIsDbmUser } from '../auth/dbmAccess'
 import { useCreateDbmWorkOrder, toUserFriendlyError } from '../hooks/useCreateDbmWorkOrder'
 import { useDbmLookups } from '../hooks/useDbmLookups'
-import { toCreateDbmWorkOrderRequest } from '../mappers/toCreateRequest'
+import {
+  toCreateDbmWorkOrderRequest,
+  toFormFromDbmResponse,
+} from '../mappers/toCreateRequest'
 import {
   DEFAULT_DBM_CREATE_FORM,
   type DbmCreateFormState,
@@ -75,13 +79,22 @@ function toggleMultiValue(current: string[], value: string): string[] {
 
 /**
  * DBM Work Order Request Create screen (Athena styling).
- * Lookups + mandatory create validation + POST /api/dbm/work-orders.
+ * Create: POST /api/dbm/work-orders → redirect to Cases grid with success toast.
+ * Optional load via ?caseId=&mode=view remains for deep-links; primary UX is create → grid.
  */
 export function DbmWorkOrderCreatePage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const loggedInOwner =
     user?.displayName?.trim() || user?.username?.trim() || 'Logged-in user'
+
+  const caseIdRaw = searchParams.get('caseId')
+  const caseId =
+    caseIdRaw && /^\d+$/.test(caseIdRaw) ? Number(caseIdRaw) : null
+  const modeParam = searchParams.get('mode')
+  const isViewMode = caseId != null && (modeParam === 'view' || modeParam == null)
+  const readOnly = isViewMode
 
   const [form, setForm] = useState<DbmCreateFormState>(() => ({
     ...DEFAULT_DBM_CREATE_FORM,
@@ -91,12 +104,45 @@ export function DbmWorkOrderCreatePage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loadingCase, setLoadingCase] = useState(isViewMode)
 
   useEffect(() => {
+    if (isViewMode) {
+      return
+    }
     setForm((prev) =>
       prev.caseOwner === loggedInOwner ? prev : { ...prev, caseOwner: loggedInOwner },
     )
-  }, [loggedInOwner])
+  }, [loggedInOwner, isViewMode])
+
+  useEffect(() => {
+    if (!isViewMode || caseId == null) {
+      setLoadingCase(false)
+      return
+    }
+    let cancelled = false
+    setLoadingCase(true)
+    setLoadError(null)
+    getDbmWorkOrder(caseId)
+      .then((response) => {
+        if (cancelled) return
+        setForm(toFormFromDbmResponse(response))
+        setSuccessMessage(
+          `Case created successfully with Case ID ${response.caseNumber}.`,
+        )
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return
+        setLoadError(toUserFriendlyError(error))
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCase(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isViewMode, caseId])
 
   const {
     data: lookups,
@@ -180,6 +226,9 @@ export function DbmWorkOrderCreatePage() {
   }
 
   const handleReset = () => {
+    if (readOnly) {
+      return
+    }
     setForm({ ...DEFAULT_DBM_CREATE_FORM, caseOwner: loggedInOwner })
     setFieldErrors({})
     setSaveError(null)
@@ -189,6 +238,10 @@ export function DbmWorkOrderCreatePage() {
 
   const handleCancelClick = () => {
     if (isSaving) {
+      return
+    }
+    if (readOnly) {
+      navigate('/cases')
       return
     }
     setCancelConfirmOpen(true)
@@ -205,7 +258,7 @@ export function DbmWorkOrderCreatePage() {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
-    if (isSaving) {
+    if (isSaving || readOnly) {
       return
     }
 
@@ -218,14 +271,11 @@ export function DbmWorkOrderCreatePage() {
       return
     }
 
-    const payload = toCreateDbmWorkOrderRequest(form)
+    const payload = toCreateDbmWorkOrderRequest(form, isDbmUser)
     createMutation.mutate(payload, {
       onSuccess: (created) => {
         setSaveError(null)
-        setSuccessMessage(
-          `Case created successfully with Case ID ${created.caseNumber}.`,
-        )
-        // Case Details route is not implemented yet — return to Cases grid (AC-11 fallback).
+        // Return to Cases grid — toast handled by CasesSearchPage via location state.
         navigate('/cases', {
           replace: true,
           state: {
@@ -246,11 +296,43 @@ export function DbmWorkOrderCreatePage() {
       ? lookupsError.message
       : 'Failed to load lookup data.'
 
+  if (loadingCase) {
+    return (
+      <div className="dbm-page" data-testid="dbm-work-order-create-page">
+        <div className="dbm-page-title">DBM Work Order Request</div>
+        <div className="dbm-lookup-status dbm-lookup-loading" role="status">
+          Loading case…
+        </div>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="dbm-page" data-testid="dbm-work-order-create-page">
+        <div className="dbm-page-title">DBM Work Order Request</div>
+        <div className="dbm-lookup-status dbm-lookup-error" role="alert">
+          <span>{loadError}</span>
+          <button
+            type="button"
+            className="dbm-btn dbm-btn-secondary"
+            onClick={() => navigate('/cases')}
+          >
+            Back to Cases
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="dbm-page" data-testid="dbm-work-order-create-page">
-      <div className="dbm-page-title">DBM Work Order Request</div>
+      <div className="dbm-page-title">
+        {readOnly ? 'DBM Work Order Request — Case Details' : 'DBM Work Order Request'}
+      </div>
 
       <form className="dbm-form" onSubmit={handleSubmit} noValidate>
+        <fieldset className="dbm-fieldset" disabled={readOnly}>
         {lookupsLoading && (
           <div
             className="dbm-lookup-status dbm-lookup-loading"
@@ -784,6 +866,8 @@ export function DbmWorkOrderCreatePage() {
           </section>
         ) : null}
 
+        </fieldset>
+
         <footer className="dbm-actions">
           <button
             type="button"
@@ -792,26 +876,30 @@ export function DbmWorkOrderCreatePage() {
             disabled={isSaving}
             onClick={handleCancelClick}
           >
-            Cancel
+            {readOnly ? 'Back to Cases' : 'Cancel'}
           </button>
-          <button
-            type="button"
-            className="dbm-btn dbm-btn-secondary"
-            data-testid="dbm-reset"
-            onClick={handleReset}
-            disabled={isSaving}
-          >
-            Reset
-          </button>
-          <button
-            type="submit"
-            className="dbm-btn dbm-btn-primary"
-            data-testid="dbm-save"
-            disabled={isSaving}
-            aria-busy={isSaving}
-          >
-            {isSaving ? 'Saving…' : 'Save'}
-          </button>
+          {!readOnly ? (
+            <>
+              <button
+                type="button"
+                className="dbm-btn dbm-btn-secondary"
+                data-testid="dbm-reset"
+                onClick={handleReset}
+                disabled={isSaving}
+              >
+                Reset
+              </button>
+              <button
+                type="submit"
+                className="dbm-btn dbm-btn-primary"
+                data-testid="dbm-save"
+                disabled={isSaving}
+                aria-busy={isSaving}
+              >
+                {isSaving ? 'Saving…' : 'Save'}
+              </button>
+            </>
+          ) : null}
         </footer>
       </form>
 

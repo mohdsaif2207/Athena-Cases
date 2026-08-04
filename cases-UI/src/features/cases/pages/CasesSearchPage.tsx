@@ -24,6 +24,14 @@ import {
 import { exportCasesToExcel } from '@/features/cases/utils/exportCasesExcel'
 import { applyCaseFilters, paginate } from '@/features/cases/utils/filterCases'
 import { resolveCaseTypeCreatePath } from '@/features/cases/utils/caseTypeRoutes'
+import {
+  getDbmWorkOrder,
+  updateDbmWorkOrder,
+} from '@/features/dbm-work-order-request/api/workOrders'
+import {
+  isDbmCaseRecord,
+  toUpdateRequestFromGridEdit,
+} from '@/features/dbm-work-order-request/mappers/toCreateRequest'
 import type {
   AdvancedFilterState,
   CaseDetailMode,
@@ -339,7 +347,23 @@ export function CasesSearchPage() {
         }}
         onSave={async (next) => {
           try {
-            await updateCase(next)
+            if (isDbmCaseRecord(next)) {
+              // DBM edit persists via DBM API so the receiving team gets a notification.
+              const current = await getDbmWorkOrder(next.id)
+              await updateDbmWorkOrder(
+                next.id,
+                toUpdateRequestFromGridEdit(current, {
+                  clientId: next.clientId,
+                  subject: next.subject,
+                  caseStatus: next.caseStatus,
+                  priority: next.priority,
+                  requestedDueDate: next.requestedDueDate,
+                  description: next.description,
+                }),
+              )
+            } else {
+              await updateCase(next)
+            }
             setAllCases((prev) => prev.map((c) => (c.id === next.id ? next : c)))
             setDetailMode(null)
             setSelected(null)

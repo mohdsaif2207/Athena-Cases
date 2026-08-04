@@ -13,7 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.athena.cases.casemanagement.CaseEntity;
 import com.athena.cases.casemanagement.CaseRepository;
+import com.athena.cases.common.constants.PermissionCodes;
 import com.athena.cases.common.enums.CaseTypeCode;
+import com.athena.cases.common.exception.ForbiddenException;
+import com.athena.cases.common.exception.ResourceNotFoundException;
+import com.athena.cases.features.dbm.DbmConstants;
 import com.athena.cases.features.dbm.dto.CreateDbmWorkOrderRequest;
 import com.athena.cases.features.dbm.dto.DbmWorkOrderResponse;
 import com.athena.cases.features.dbm.dto.UpdateDbmWorkOrderRequest;
@@ -47,8 +51,6 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
     private static final int CASE_NUMBER_WIDTH = 6;
     private static final int MAX_CASE_NUMBER_SEQUENCE = 999_999;
     private static final String DEFAULT_FREQUENCY = "Once";
-    private static final String TRANSFER_TYPE_CUSTOM = "Custom";
-    private static final String TRANSFER_TYPE_CUSTOM_REQUIRES_APPROVAL = "Custom (Requires Approval)";
 
     private final CaseRepository caseRepository;
     private final CaseTypeRepository caseTypeRepository;
@@ -74,8 +76,11 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
 
     @Override
     public DbmWorkOrderResponse create(CreateDbmWorkOrderRequest request) {
+        requirePermission(PermissionCodes.CASES_CREATE);
+
         Instant now = Instant.now();
         String actor = resolveActorDisplayName();
+        boolean dbmUser = isDbmReceivingUser();
 
         CaseTypeEntity caseType = caseTypeRepository
                 .findByCode(CaseTypeCode.DBM_WORK_ORDER_REQUEST.name())
@@ -86,7 +91,7 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
 
         DbmWorkOrder dbmWorkOrder = new DbmWorkOrder();
         dbmWorkOrder.setCaseEntity(savedCase);
-        mapRequestToDbmWorkOrder(request, dbmWorkOrder);
+        mapRequestToDbmWorkOrder(request, dbmWorkOrder, dbmUser, null);
         dbmWorkOrder.setCreatedAt(now);
         dbmWorkOrder.setUpdatedAt(now);
         dbmWorkOrder.setCreatedBy(actor);
@@ -101,12 +106,13 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
         enqueueReceivingTeamWork(savedCase, caseType);
 
         log.info(
-                "dbm work order created - caseId={} caseNumber={} owner={}",
+                "dbm work order created - caseId={} caseNumber={} owner={} pendingApproval={}",
                 savedCase.getId(),
                 savedCase.getCaseNumber(),
-                savedCase.getCaseOwner());
+                savedCase.getCaseOwner(),
+                savedCase.isPendingDbmApproval());
 
-        return toResponse(savedCase, savedDbm, caseType.getCode());
+        return toResponse(savedCase, savedDbm, caseType.getCode(), dbmUser);
     }
 
     private String resolveActorDisplayName() {
@@ -143,6 +149,7 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
                 request.frequency() == null || request.frequency().isBlank()
                         ? DEFAULT_FREQUENCY
                         : request.frequency());
+        caseEntity.setPendingDbmApproval(isCustomTransferType(request.transferType()));
         caseEntity.setCreatedAt(now);
         caseEntity.setUpdatedAt(now);
         caseEntity.setCreatedBy(actor);
@@ -166,27 +173,29 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
                     caseId,
                     caseType.getCode(),
                     team.getCode(),
-                    "Pending Assignment"));
+                    DbmConstants.WORKFLOW_STATUS_PENDING_ASSIGNMENT));
             notificationService.notifyTeam(new NotifyTeamCommand(
                     caseId,
                     team.getCode(),
-                    "A new DBM Work Order Request (Case " + savedCase.getCaseNumber()
-                            + ") has been assigned to your team.",
-                    "/cases/" + caseId));
+                    DbmConstants.newCaseNotificationMessage(savedCase.getCaseNumber()),
+                    DbmConstants.caseDeepLink(caseId)));
         }
     }
 
     @Override
     public DbmWorkOrderResponse update(Long caseId, UpdateDbmWorkOrderRequest request) {
+        requirePermission(PermissionCodes.CASES_EDIT);
+        boolean dbmUser = isDbmReceivingUser();
+
         Instant now = Instant.now();
         String actor = resolveActorDisplayName();
 
         CaseEntity caseEntity = caseRepository.findById(caseId)
-                .orElseThrow(() -> new IllegalStateException("Case not found: " + caseId));
+                .orElseThrow(() -> new ResourceNotFoundException("Case", String.valueOf(caseId)));
 
         DbmWorkOrder dbmWorkOrder = dbmWorkOrderRepository.findByCaseId(caseId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "DBM Work Order not found for caseId: " + caseId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "DBM Work Order", String.valueOf(caseId)));
 
         caseEntity.setSubject(request.subject());
         caseEntity.setDescription(request.description());
@@ -196,10 +205,11 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
         caseEntity.setClientId(request.clientId());
         caseEntity.setEventId(request.eventId());
         caseEntity.setMailMonth(request.mailMonth());
+        caseEntity.setPendingDbmApproval(isCustomTransferType(request.transferType()));
         caseEntity.setUpdatedAt(now);
         caseEntity.setUpdatedBy(actor);
 
-        mapRequestToDbmWorkOrder(request, dbmWorkOrder);
+        mapRequestToDbmWorkOrder(request, dbmWorkOrder, dbmUser, dbmWorkOrder);
         dbmWorkOrder.setUpdatedAt(now);
         dbmWorkOrder.setUpdatedBy(actor);
 
@@ -213,28 +223,54 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
         CaseEntity savedCase = caseRepository.save(caseEntity);
         DbmWorkOrder savedDbm = dbmWorkOrderRepository.save(dbmWorkOrder);
 
-        String caseTypeCode = caseTypeRepository.findById(savedCase.getCaseTypeId())
-                .map(CaseTypeEntity::getCode)
-                .orElse(CaseTypeCode.DBM_WORK_ORDER_REQUEST.name());
+        CaseTypeEntity caseType = caseTypeRepository.findById(savedCase.getCaseTypeId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "CaseType", String.valueOf(savedCase.getCaseTypeId())));
+        notifyReceivingTeamsOfUpdate(savedCase, caseType);
 
-        return toResponse(savedCase, savedDbm, caseTypeCode);
+        log.info(
+                "dbm work order updated - caseId={} caseNumber={}",
+                savedCase.getId(),
+                savedCase.getCaseNumber());
+
+        return toResponse(savedCase, savedDbm, caseType.getCode(), dbmUser);
+    }
+
+    /**
+     * Notification only on edit (no second workflow instance).
+     */
+    private void notifyReceivingTeamsOfUpdate(CaseEntity savedCase, CaseTypeEntity caseType) {
+        Long caseId = savedCase.getId();
+        for (TeamEntity team : caseType.getReceivingTeams()) {
+            if (!team.isActive()) {
+                continue;
+            }
+            notificationService.notifyTeam(new NotifyTeamCommand(
+                    caseId,
+                    team.getCode(),
+                    DbmConstants.updatedCaseNotificationMessage(savedCase.getCaseNumber()),
+                    DbmConstants.caseDeepLink(caseId)));
+        }
     }
 
     @Override
     @Transactional(readOnly = true)
     public DbmWorkOrderResponse getByCaseId(Long caseId) {
+        requirePermission(PermissionCodes.CASES_VIEW);
+        boolean dbmUser = isDbmReceivingUser();
+
         CaseEntity caseEntity = caseRepository.findById(caseId)
-                .orElseThrow(() -> new IllegalStateException("Case not found: " + caseId));
+                .orElseThrow(() -> new ResourceNotFoundException("Case", String.valueOf(caseId)));
 
         DbmWorkOrder dbmWorkOrder = dbmWorkOrderRepository.findByCaseId(caseId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "DBM Work Order not found for caseId: " + caseId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "DBM Work Order", String.valueOf(caseId)));
 
         String caseTypeCode = caseTypeRepository.findById(caseEntity.getCaseTypeId())
                 .map(CaseTypeEntity::getCode)
                 .orElse(CaseTypeCode.DBM_WORK_ORDER_REQUEST.name());
 
-        return toResponse(caseEntity, dbmWorkOrder, caseTypeCode);
+        return toResponse(caseEntity, dbmWorkOrder, caseTypeCode, dbmUser);
     }
 
     /**
@@ -268,11 +304,15 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
             return false;
         }
         String normalized = transferType.trim();
-        return TRANSFER_TYPE_CUSTOM.equalsIgnoreCase(normalized)
-                || TRANSFER_TYPE_CUSTOM_REQUIRES_APPROVAL.equalsIgnoreCase(normalized);
+        return DbmConstants.TRANSFER_TYPE_CUSTOM.equalsIgnoreCase(normalized)
+                || DbmConstants.TRANSFER_TYPE_CUSTOM_REQUIRES_APPROVAL.equalsIgnoreCase(normalized);
     }
 
-    private void mapRequestToDbmWorkOrder(CreateDbmWorkOrderRequest request, DbmWorkOrder target) {
+    private void mapRequestToDbmWorkOrder(
+            CreateDbmWorkOrderRequest request,
+            DbmWorkOrder target,
+            boolean dbmUser,
+            DbmWorkOrder existing) {
         applyDbmWorkOrderFields(
                 target,
                 request.vendor(),
@@ -291,12 +331,16 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
                 request.selectionCriteria(),
                 request.matchbackField(),
                 request.changeTo(),
-                request.dbmWorkOrderNumber(),
-                request.dbmCompletionNotes(),
-                request.totalRecordsUpdated());
+                resolveDbmOnlyText(dbmUser, request.dbmWorkOrderNumber(), existing == null ? null : existing.getDbmWorkOrderNumber()),
+                resolveDbmOnlyText(dbmUser, request.dbmCompletionNotes(), existing == null ? null : existing.getDbmCompletionNotes()),
+                resolveDbmOnlyInt(dbmUser, request.totalRecordsUpdated(), existing == null ? null : existing.getTotalRecordsUpdated()));
     }
 
-    private void mapRequestToDbmWorkOrder(UpdateDbmWorkOrderRequest request, DbmWorkOrder target) {
+    private void mapRequestToDbmWorkOrder(
+            UpdateDbmWorkOrderRequest request,
+            DbmWorkOrder target,
+            boolean dbmUser,
+            DbmWorkOrder existing) {
         applyDbmWorkOrderFields(
                 target,
                 request.vendor(),
@@ -315,9 +359,18 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
                 request.selectionCriteria(),
                 request.matchbackField(),
                 request.changeTo(),
-                request.dbmWorkOrderNumber(),
-                request.dbmCompletionNotes(),
-                request.totalRecordsUpdated());
+                resolveDbmOnlyText(dbmUser, request.dbmWorkOrderNumber(), existing.getDbmWorkOrderNumber()),
+                resolveDbmOnlyText(dbmUser, request.dbmCompletionNotes(), existing.getDbmCompletionNotes()),
+                resolveDbmOnlyInt(dbmUser, request.totalRecordsUpdated(), existing.getTotalRecordsUpdated()));
+    }
+
+    /** Non-DBM users cannot set Section 4 fields; keep existing values on update. */
+    private static String resolveDbmOnlyText(boolean dbmUser, String requested, String existing) {
+        return dbmUser ? requested : existing;
+    }
+
+    private static Integer resolveDbmOnlyInt(boolean dbmUser, Integer requested, Integer existing) {
+        return dbmUser ? requested : existing;
     }
 
     private void applyDbmWorkOrderFields(
@@ -418,7 +471,8 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
     private DbmWorkOrderResponse toResponse(
             CaseEntity caseEntity,
             DbmWorkOrder dbmWorkOrder,
-            String caseTypeCode) {
+            String caseTypeCode,
+            boolean dbmUser) {
         return new DbmWorkOrderResponse(
                 caseEntity.getId(),
                 caseEntity.getCaseNumber(),
@@ -430,7 +484,7 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
                 caseEntity.getCaseStatus(),
                 caseEntity.getDescription(),
                 caseEntity.getClientId(),
-                isCustomTransferType(dbmWorkOrder.getTransferType()),
+                caseEntity.isPendingDbmApproval(),
                 dbmWorkOrder.getVendor(),
                 dbmWorkOrder.isCoreProcessorConversion(),
                 dbmWorkOrder.getTransferType(),
@@ -456,11 +510,23 @@ public class DbmWorkOrderServiceImpl implements DbmWorkOrderService {
                 dbmWorkOrder.getSelectionCriteria(),
                 dbmWorkOrder.getMatchbackField(),
                 dbmWorkOrder.getChangeTo(),
-                dbmWorkOrder.getDbmWorkOrderNumber(),
-                dbmWorkOrder.getDbmCompletionNotes(),
-                dbmWorkOrder.getTotalRecordsUpdated(),
+                dbmUser ? dbmWorkOrder.getDbmWorkOrderNumber() : null,
+                dbmUser ? dbmWorkOrder.getDbmCompletionNotes() : null,
+                dbmUser ? dbmWorkOrder.getTotalRecordsUpdated() : null,
                 dbmWorkOrder.getCreatedAt(),
                 dbmWorkOrder.getUpdatedAt()
         );
+    }
+
+    private void requirePermission(String permissionCode) {
+        if (!currentUserService.hasPermission(permissionCode)) {
+            throw new ForbiddenException(permissionCode + " required");
+        }
+    }
+
+    /** AC8 — Section 4 is for users on the DBM receiving team only. */
+    private boolean isDbmReceivingUser() {
+        return currentUserService.requirePrincipal().getReceivingTeamCodes().stream()
+                .anyMatch(code -> DbmConstants.RECEIVER_TEAM_DBM.equalsIgnoreCase(code));
     }
 }
