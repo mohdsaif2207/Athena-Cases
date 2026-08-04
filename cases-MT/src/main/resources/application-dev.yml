@@ -16,8 +16,12 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   flyway:
     create-schemas: true
-    # Shared RDS may have teammate migrations not present in this branch yet.
-    ignore-migration-patterns: "*:missing"
+    # Shared RDS often has teammate versions not on this branch (e.g. 202608041530).
+    # Flyway Community still fails validate on "applied but missing locally"; skip validate
+    # in local/dev only so boot can proceed. Keep validate on in qa/uat/pci/prod.
+    validate-on-migrate: false
+    ignore-migration-patterns:
+      - "*:missing"
 
 app:
   cors:

@@ -58,8 +58,8 @@ public class BillingDepartmentRequest {
     @Column(name = "request_type", length = 64)
     private BillingRequestType requestType;
 
-    @Column(name = "client_id")
-    private Long clientId;
+    @Column(name = "client_id", length = 64)
+    private String clientId;
 
     @Column(name = "campaign_id", length = 64)
     private String campaignId;
@@ -178,11 +178,11 @@ public class BillingDepartmentRequest {
         this.requestType = requestType;
     }
 
-    public Long getClientId() {
+    public String getClientId() {
         return clientId;
     }
 
-    public void setClientId(Long clientId) {
+    public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 

@@ -157,7 +157,7 @@ public class BillingDepartmentRequestMapper {
     private void applyBillingFields(
             BillingDepartmentRequest entity,
             BillingRequestType requestType,
-            Long clientId,
+            String clientId,
             String campaignId,
             String reasonForImportance,
             Boolean dailyIssueReport,

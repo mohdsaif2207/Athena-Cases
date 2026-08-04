@@ -197,7 +197,7 @@ export function responseToFormValues(dto: BillingDepartmentRequestResponseDto): 
 export function formValuesToCreatePayload(values: BillingFormValues): BillingDepartmentRequestCreatePayload {
   return {
     requestType: emptyToNull(values.requestType),
-    clientId: parseOptionalLong(values.clientId),
+    clientId: emptyToNull(values.clientId),
     campaignId: emptyToNull(values.campaignId),
     assignedTo: emptyToNull(values.assignedTo),
     priority: values.priority,

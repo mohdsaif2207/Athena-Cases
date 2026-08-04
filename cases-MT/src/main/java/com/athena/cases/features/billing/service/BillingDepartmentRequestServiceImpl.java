@@ -239,7 +239,7 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
 
     private void validateReferential(
             String campaignId,
-            Long clientId,
+            String clientId,
             Long segmentId,
             Long productId,
             Long billingHoldByProductId,
@@ -253,10 +253,10 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
             }
         }
         if (segmentId != null) {
-            if (clientId == null) {
+            if (clientId == null || clientId.isBlank()) {
                 throw new BillingValidationException("segmentId", "segmentId requires a selected clientId");
             }
-            boolean ok = billingLookupService.listSegments(String.valueOf(clientId)).stream()
+            boolean ok = billingLookupService.listSegments(clientId).stream()
                     .anyMatch(item -> String.valueOf(segmentId).equals(item.id())
                             || String.valueOf(segmentId).equals(item.code()));
             if (!ok) {
@@ -292,11 +292,11 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
         }
     }
 
-    private String resolveClientName(Long clientId) {
-        if (clientId == null) {
+    private String resolveClientName(String clientId) {
+        if (clientId == null || clientId.isBlank()) {
             return null;
         }
-        String key = String.valueOf(clientId);
+        String key = clientId.trim();
         return lookupService.searchClients(null).stream()
                 .filter(item -> key.equals(item.id()) || key.equals(item.code()))
                 .map(LookupItem::label)
@@ -304,12 +304,12 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
                 .orElse(null);
     }
 
-    private String resolveSegmentName(Long clientId, Long segmentId) {
-        if (clientId == null || segmentId == null) {
+    private String resolveSegmentName(String clientId, Long segmentId) {
+        if (clientId == null || clientId.isBlank() || segmentId == null) {
             return null;
         }
         String key = String.valueOf(segmentId);
-        return billingLookupService.listSegments(String.valueOf(clientId)).stream()
+        return billingLookupService.listSegments(clientId).stream()
                 .filter(item -> key.equals(item.id()) || key.equals(item.code()))
                 .map(LookupItem::label)
                 .findFirst()
