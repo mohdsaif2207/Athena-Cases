@@ -273,6 +273,10 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
                 throw new BillingValidationException("parentCaseId",
                         "parentCaseId must reference an existing case");
             }
+            if (!billingLookupService.isBillingCase(parentCaseId)) {
+                throw new BillingValidationException("parentCaseId",
+                        "parentCaseId must reference a Billing Department Request case");
+            }
         }
     }
 

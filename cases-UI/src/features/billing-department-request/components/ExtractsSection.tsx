@@ -67,6 +67,7 @@ export function ExtractsSection({ values, readOnly, errors, onChange }: Extracts
               value={values.billingInstitution}
               maxLength={255}
               readOnly={readOnly}
+              placeholder="Enter billing institution name"
               onChange={(e) => onChange('billingInstitution', e.target.value)}
               data-testid="billing-institution"
               aria-invalid={Boolean(errors.billingInstitution)}
@@ -93,6 +94,7 @@ export function ExtractsSection({ values, readOnly, errors, onChange }: Extracts
               value={values.billSet}
               maxLength={255}
               readOnly={readOnly}
+              placeholder="Enter bill set identifier"
               onChange={(e) => onChange('billSet', e.target.value)}
               data-testid="billing-bill-set"
               aria-invalid={Boolean(errors.billSet)}
@@ -107,6 +109,7 @@ export function ExtractsSection({ values, readOnly, errors, onChange }: Extracts
               value={values.billingCycle}
               maxLength={255}
               readOnly={readOnly}
+              placeholder="Enter billing cycle (e.g. Monthly)"
               onChange={(e) => onChange('billingCycle', e.target.value)}
               data-testid="billing-cycle"
               aria-invalid={Boolean(errors.billingCycle)}
@@ -140,6 +143,7 @@ export function ExtractsSection({ values, readOnly, errors, onChange }: Extracts
               value={values.hardDeclineCodes}
               maxLength={500}
               readOnly={readOnly}
+              placeholder="Enter hard decline codes (comma-separated)"
               onChange={(e) => onChange('hardDeclineCodes', e.target.value)}
               data-testid="billing-hard-decline-codes"
               aria-invalid={Boolean(errors.hardDeclineCodes)}

@@ -248,10 +248,11 @@ class BillingDepartmentRequestServiceImplTest {
     }
 
     @Test
-    void should_returnEmptyList_when_listAssigneesUntilLookupApiExists() {
-        when(billingLookupService.listAssignees()).thenReturn(List.of());
+    void should_delegateAssigneesToBillingLookupService() {
+        when(billingLookupService.listAssignees()).thenReturn(List.of(
+                new LookupItem("billing.ops", "billing.ops", "Billing Ops")));
 
-        assertThat(service.listAssignees()).isEmpty();
+        assertThat(service.listAssignees()).extracting(LookupItem::code).containsExactly("billing.ops");
     }
 
     private static BillingDepartmentRequestCreateRequest minimalCreateRequest() {

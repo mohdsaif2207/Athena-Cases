@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchNotifications } from '@/features/cases/api/notificationApi'
 import { CasesPagination } from '@/features/cases/components/CasesPagination'
@@ -30,6 +31,7 @@ interface NotificationQueuePanelProps {
 
 export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps) {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [rows, setRows] = useState<NotificationRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -87,6 +89,11 @@ export function NotificationQueuePanel({ onToast }: NotificationQueuePanelProps)
   }
 
   function openDetail(row: NotificationRecord, mode: 'view' | 'edit') {
+    // Deep links (stored in details) open the case page — e.g. Billing view route.
+    if (mode === 'view' && row.details?.startsWith('/')) {
+      navigate(row.details)
+      return
+    }
     setDetailTitle(mode === 'view' ? 'View Notification Details' : 'Edit Notification Details')
     setDetailFields({
       messageId: row.messageId,

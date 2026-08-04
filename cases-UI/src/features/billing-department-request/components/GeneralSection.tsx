@@ -119,6 +119,7 @@ export function GeneralSection({
               type="text"
               value={caseOwner}
               readOnly
+              placeholder="Auto-filled from signed-in user"
               data-testid="billing-case-owner"
               aria-invalid={Boolean(errors.caseOwner)}
             />

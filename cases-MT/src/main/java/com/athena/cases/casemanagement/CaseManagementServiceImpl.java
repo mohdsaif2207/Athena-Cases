@@ -3,6 +3,7 @@ package com.athena.cases.casemanagement;
 import com.athena.cases.common.constants.PermissionCodes;
 import com.athena.cases.common.exception.ForbiddenException;
 import com.athena.cases.common.exception.ResourceNotFoundException;
+import com.athena.cases.features.billing.BillingConstants;
 import com.athena.cases.identity.entity.CaseTypeEntity;
 import com.athena.cases.identity.entity.TeamEntity;
 import com.athena.cases.identity.repository.CaseTypeRepository;
@@ -87,6 +88,7 @@ public class CaseManagementServiceImpl implements CaseManagementService {
 
     /**
      * After case save: create workflow + notification rows for each receiving team of the case type.
+     * Initiating teams are never queued — only {@link CaseTypeEntity#getReceivingTeams()}.
      * Queues remain visible only to users with WF_VIEW/NOTIF_VIEW and matching receiving-team scope.
      */
     private void enqueueReceivingTeamWork(CaseEntity saved, CaseTypeEntity caseType) {
@@ -102,13 +104,27 @@ public class CaseManagementServiceImpl implements CaseManagementService {
             notificationService.notifyTeam(new NotifyTeamCommand(
                     saved.getId(),
                     team.getCode(),
-                    "New case " + saved.getCaseNumber() + " assigned to " + team.getName(),
-                    "/cases"));
+                    notificationMessage(caseType, saved.getCaseNumber(), team.getName()),
+                    notificationDeepLink(caseType, saved.getId())));
             log.info(
                     "case save enqueued workflow/notification - caseId={} receivingTeam={}",
                     saved.getId(),
                     team.getCode());
         }
+    }
+
+    private static String notificationMessage(CaseTypeEntity caseType, String caseNumber, String teamName) {
+        if (BillingConstants.CASE_TYPE_CODE.equals(caseType.getCode())) {
+            return BillingConstants.newCaseNotificationMessage(caseNumber);
+        }
+        return "New case " + caseNumber + " assigned to " + teamName;
+    }
+
+    private static String notificationDeepLink(CaseTypeEntity caseType, Long caseId) {
+        if (BillingConstants.CASE_TYPE_CODE.equals(caseType.getCode())) {
+            return BillingConstants.caseDeepLink(caseId);
+        }
+        return "/cases";
     }
 
     @Override

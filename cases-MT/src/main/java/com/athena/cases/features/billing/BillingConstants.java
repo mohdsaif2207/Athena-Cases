@@ -5,17 +5,17 @@ package com.athena.cases.features.billing;
  */
 public final class BillingConstants {
 
+    public static final String CASE_TYPE_CODE = "BILLING_DEPARTMENT_REQUEST";
+
     public static final String RECEIVER_TEAM_BILLING_OPS = "BILLING_OPS_TEAM";
 
     public static final String WORKFLOW_STATUS_PENDING_ASSIGNMENT = "PENDING_ASSIGNMENT";
 
-    /** Deep-link pattern — approved Phase-1 decision #11. */
-    public static final String CASE_DEEP_LINK_PATTERN = "/cases/%d";
-
     /**
-     * TODO Replace with actual implementation after module integration —
-     * If Cases Search routing changes, update this pattern in one place.
+     * Opens Billing view/edit page (query-param details route until /cases/:id exists).
      */
+    public static final String CASE_DEEP_LINK_PATTERN = "/cases/new/billing?caseId=%d&mode=view";
+
     public static String caseDeepLink(Long caseId) {
         return CASE_DEEP_LINK_PATTERN.formatted(caseId);
     }

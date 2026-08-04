@@ -4,16 +4,19 @@ import com.athena.cases.casemanagement.CaseEntity;
 import com.athena.cases.casemanagement.CaseRepository;
 import com.athena.cases.common.constants.PermissionCodes;
 import com.athena.cases.common.exception.ForbiddenException;
+import com.athena.cases.features.billing.BillingConstants;
 import com.athena.cases.features.billing.enums.BillingHoldLevelCode;
 import com.athena.cases.features.billing.enums.BillingHoldType;
 import com.athena.cases.identity.entity.CaseTypeEntity;
+import com.athena.cases.identity.entity.UserEntity;
 import com.athena.cases.identity.repository.CaseTypeRepository;
+import com.athena.cases.identity.repository.UserRepository;
 import com.athena.cases.lookup.LookupItem;
 import com.athena.cases.security.CurrentUserService;
-import com.athena.cases.security.UserPrincipal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,15 +27,18 @@ public class BillingLookupServiceImpl implements BillingLookupService {
 
     private final CaseRepository caseRepository;
     private final CaseTypeRepository caseTypeRepository;
+    private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
 
     public BillingLookupServiceImpl(
             CaseRepository caseRepository,
             CaseTypeRepository caseTypeRepository,
+            UserRepository userRepository,
             CurrentUserService currentUserService
     ) {
         this.caseRepository = caseRepository;
         this.caseTypeRepository = caseTypeRepository;
+        this.userRepository = userRepository;
         this.currentUserService = currentUserService;
     }
 
@@ -54,24 +60,21 @@ public class BillingLookupServiceImpl implements BillingLookupService {
         return BillingLookupMockData.segmentsForClient(clientId);
     }
 
+    /**
+     * Parent-case candidates are restricted to Billing Department Request cases only.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<LookupItem> findParentCases(String query) {
         requireCasesRead();
-        UserPrincipal principal = currentUserService.requirePrincipal();
-        List<String> caseTypeCodes = principal.getCaseTypeCodes();
-        if (caseTypeCodes.isEmpty()) {
-            return List.of();
-        }
 
-        List<CaseTypeEntity> types = caseTypeRepository.findByCodeIn(caseTypeCodes);
-        if (types.isEmpty()) {
+        Optional<CaseTypeEntity> billingType = caseTypeRepository.findByCode(BillingConstants.CASE_TYPE_CODE);
+        if (billingType.isEmpty()) {
             return List.of();
         }
-        List<Long> typeIds = types.stream().map(CaseTypeEntity::getId).toList();
 
         String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        return caseRepository.findAuthorized(typeIds, false).stream()
+        return caseRepository.findAuthorized(List.of(billingType.get().getId()), false).stream()
                 .filter(c -> matchesParentQuery(c, q))
                 .limit(PARENT_CASE_LOOKUP_LIMIT)
                 .map(c -> new LookupItem(
@@ -82,16 +85,36 @@ public class BillingLookupServiceImpl implements BillingLookupService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean isBillingCase(Long caseId) {
+        if (caseId == null) {
+            return false;
+        }
+        Optional<CaseTypeEntity> billingType = caseTypeRepository.findByCode(BillingConstants.CASE_TYPE_CODE);
+        if (billingType.isEmpty()) {
+            return false;
+        }
+        return caseRepository.findById(caseId)
+                .map(c -> billingType.get().getId().equals(c.getCaseTypeId()))
+                .orElse(false);
+    }
+
+    @Override
     public List<BillingHoldLevelCode> listHoldLevels(BillingHoldType holdType) {
         // TODO Replace after BA finalizes Hold Type → Level matrix — interim flat set
         return Arrays.asList(BillingHoldLevelCode.values());
     }
 
+    /**
+     * Assignees are IAM users on the Billing receiving team only ({@code BILLING_OPS_TEAM}).
+     */
     @Override
+    @Transactional(readOnly = true)
     public List<LookupItem> listAssignees() {
-        // TEMP: Replace with shared lookup API when available —
-        // billing-access users are not exposed on LookupService yet.
-        return List.of();
+        requireCasesRead();
+        return userRepository.findActiveByTeamCode(BillingConstants.RECEIVER_TEAM_BILLING_OPS).stream()
+                .map(BillingLookupServiceImpl::toAssigneeItem)
+                .toList();
     }
 
     private void requireCasesRead() {
@@ -100,6 +123,14 @@ public class BillingLookupServiceImpl implements BillingLookupService {
                 || currentUserService.hasPermission(PermissionCodes.CASES_ACCESS))) {
             throw new ForbiddenException("CASES_VIEW required");
         }
+    }
+
+    private static LookupItem toAssigneeItem(UserEntity user) {
+        String username = user.getUsername();
+        String label = user.getDisplayName() == null || user.getDisplayName().isBlank()
+                ? username
+                : user.getDisplayName();
+        return new LookupItem(username, username, label);
     }
 
     private static boolean matchesParentQuery(CaseEntity c, String queryLower) {

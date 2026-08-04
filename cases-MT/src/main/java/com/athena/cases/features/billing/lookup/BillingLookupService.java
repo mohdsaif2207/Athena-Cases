@@ -21,6 +21,9 @@ public interface BillingLookupService {
     /** Real {@code cases.id} values the caller may use as parentCaseId. */
     List<LookupItem> findParentCases(String query);
 
+    /** True when {@code caseId} exists and is a Billing Department Request case. */
+    boolean isBillingCase(Long caseId);
+
     List<BillingHoldLevelCode> listHoldLevels(BillingHoldType holdType);
 
     List<LookupItem> listAssignees();
