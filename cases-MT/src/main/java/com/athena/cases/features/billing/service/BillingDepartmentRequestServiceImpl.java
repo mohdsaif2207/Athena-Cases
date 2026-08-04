@@ -239,12 +239,21 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
 
     private void validateReferential(
             String campaignId,
-            Long clientId,
+            String clientId,
             Long segmentId,
             Long productId,
             Long billingHoldByProductId,
             Long parentCaseId
     ) {
+        String normalizedClientId = blankToNull(clientId);
+        if (normalizedClientId != null) {
+            boolean ok = lookupService.listActiveClients().stream()
+                    .anyMatch(item -> normalizedClientId.equals(item.id())
+                            || normalizedClientId.equals(item.code()));
+            if (!ok) {
+                throw new BillingValidationException("clientId", "clientId must be an active client");
+            }
+        }
         if (campaignId != null && !campaignId.isBlank()) {
             boolean ok = billingLookupService.listCampaigns().stream()
                     .anyMatch(item -> campaignId.equals(item.code()) || campaignId.equals(item.id()));
@@ -253,10 +262,10 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
             }
         }
         if (segmentId != null) {
-            if (clientId == null) {
+            if (normalizedClientId == null) {
                 throw new BillingValidationException("segmentId", "segmentId requires a selected clientId");
             }
-            boolean ok = billingLookupService.listSegments(String.valueOf(clientId)).stream()
+            boolean ok = billingLookupService.listSegments(normalizedClientId).stream()
                     .anyMatch(item -> String.valueOf(segmentId).equals(item.id())
                             || String.valueOf(segmentId).equals(item.code()));
             if (!ok) {
@@ -292,24 +301,25 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
         }
     }
 
-    private String resolveClientName(Long clientId) {
-        if (clientId == null) {
+    private String resolveClientName(String clientId) {
+        String key = blankToNull(clientId);
+        if (key == null) {
             return null;
         }
-        String key = String.valueOf(clientId);
-        return lookupService.searchClients(null).stream()
+        return lookupService.listActiveClients().stream()
                 .filter(item -> key.equals(item.id()) || key.equals(item.code()))
                 .map(LookupItem::label)
                 .findFirst()
                 .orElse(null);
     }
 
-    private String resolveSegmentName(Long clientId, Long segmentId) {
-        if (clientId == null || segmentId == null) {
+    private String resolveSegmentName(String clientId, Long segmentId) {
+        String normalizedClientId = blankToNull(clientId);
+        if (normalizedClientId == null || segmentId == null) {
             return null;
         }
         String key = String.valueOf(segmentId);
-        return billingLookupService.listSegments(String.valueOf(clientId)).stream()
+        return billingLookupService.listSegments(normalizedClientId).stream()
                 .filter(item -> key.equals(item.id()) || key.equals(item.code()))
                 .map(LookupItem::label)
                 .findFirst()
@@ -339,5 +349,9 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
 
     private static String blankToDefault(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

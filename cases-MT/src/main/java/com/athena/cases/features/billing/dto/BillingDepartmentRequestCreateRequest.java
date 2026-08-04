@@ -24,7 +24,8 @@ public record BillingDepartmentRequestCreateRequest(
 
         BillingRequestType requestType,
 
-        Long clientId,
+        @Size(max = 64)
+        String clientId,
 
         @Size(max = 64)
         String campaignId,

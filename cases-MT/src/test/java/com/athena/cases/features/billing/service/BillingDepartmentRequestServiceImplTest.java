@@ -105,6 +105,69 @@ class BillingDepartmentRequestServiceImplTest {
     }
 
     @Test
+    void should_persistStringClientCode_when_clientAndSegmentSelected() {
+        Long caseId = 55L;
+        when(currentUserService.requireUserId()).thenReturn("user-1");
+        when(currentUserService.requireDisplayName()).thenReturn("Ada Lovelace");
+        when(lookupService.listActiveClients()).thenReturn(List.of(
+                new LookupItem("CLIENT001", "CLIENT001", "ABC Bank")));
+        when(billingLookupService.listSegments("CLIENT001")).thenReturn(List.of(
+                new LookupItem("201", "SEG201", "ABC Retail Segment")));
+        when(caseManagementService.createCase(any(CreateCaseCommand.class)))
+                .thenReturn(new CaseRef(caseId, "BIL000055", 1L));
+        when(billingRepository.existsByCaseId(caseId)).thenReturn(false);
+        when(billingRepository.save(any(BillingDepartmentRequest.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(workflowService.getByCaseId(caseId))
+                .thenReturn(new WorkflowRef(9L, caseId, "BILLING_OPS", "BILLING_OPS_TEAM", "Pending Assignment"));
+
+        BillingDepartmentRequestCreateRequest request = new BillingDepartmentRequestCreateRequest(
+                BillingRequestType.RESEARCH,
+                "CLIENT001",
+                null,
+                null,
+                "Medium",
+                "Requested",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                201L,
+                null,
+                null,
+                "Need research with client and segment",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        BillingDepartmentRequestResponse response = service.create(request);
+
+        assertThat(response.clientId()).isEqualTo("CLIENT001");
+        assertThat(response.clientName()).isEqualTo("ABC Bank");
+        assertThat(response.segmentId()).isEqualTo(201L);
+        assertThat(response.segmentName()).isEqualTo("ABC Retail Segment");
+
+        ArgumentCaptor<BillingDepartmentRequest> entityCaptor =
+                ArgumentCaptor.forClass(BillingDepartmentRequest.class);
+        verify(billingRepository).save(entityCaptor.capture());
+        assertThat(entityCaptor.getValue().getClientId()).isEqualTo("CLIENT001");
+        assertThat(entityCaptor.getValue().getSegmentId()).isEqualTo(201L);
+    }
+
+    @Test
     void should_requireCasesCreate_when_createInvoked() {
         doThrow(new RuntimeException("denied"))
                 .when(permissionService).require("user-1", PermissionCodes.CASES_CREATE);

@@ -2,11 +2,16 @@ package com.athena.cases.common.exception;
 
 import com.athena.cases.common.dto.ErrorResponse;
 import com.athena.cases.common.web.RequestIdFilter;
+import com.athena.cases.features.billing.exception.BillingConflictException;
+import com.athena.cases.features.billing.exception.BillingResourceNotFoundException;
+import com.athena.cases.features.billing.exception.BillingValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -18,6 +23,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
@@ -54,6 +60,29 @@ public class GlobalExceptionHandler {
         log.warn("resource not found - message={}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorResponse.of("RESOURCE_NOT_FOUND", ex.getMessage(), null, requestId(), List.of()));
+    }
+
+    @ExceptionHandler(BillingValidationException.class)
+    public ResponseEntity<ErrorResponse> handleBillingValidation(BillingValidationException ex) {
+        log.warn("billing validation failed - field={} message={}", ex.getField(), ex.getMessage());
+        List<ErrorResponse.FieldErrorDetail> details = List.of(
+                new ErrorResponse.FieldErrorDetail(ex.getField(), ex.getMessage(), "VALIDATION_ERROR"));
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of("VALIDATION_ERROR", ex.getMessage(), ex.getField(), requestId(), details));
+    }
+
+    @ExceptionHandler(BillingResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleBillingNotFound(BillingResourceNotFoundException ex) {
+        log.warn("billing resource not found - {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of("RESOURCE_NOT_FOUND", ex.getMessage(), null, requestId(), List.of()));
+    }
+
+    @ExceptionHandler(BillingConflictException.class)
+    public ResponseEntity<ErrorResponse> handleBillingConflict(BillingConflictException ex) {
+        log.warn("billing conflict - {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of("OPTIMISTIC_LOCK_CONFLICT", ex.getMessage(), null, requestId(), List.of()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

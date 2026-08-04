@@ -29,7 +29,7 @@ public record BillingDepartmentRequestResponse(
         Long parentCaseId,
         String parentCaseNumber,
         BillingRequestType requestType,
-        Long clientId,
+        String clientId,
         String clientName,
         String campaignId,
         String reasonForImportance,

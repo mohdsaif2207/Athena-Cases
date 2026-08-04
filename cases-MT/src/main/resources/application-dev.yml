@@ -17,7 +17,9 @@ spring:
   flyway:
     create-schemas: true
     # Shared RDS may have teammate migrations not present in this branch yet.
-    ignore-migration-patterns: "*:missing"
+    ignore-migration-patterns:
+      - "*:missing"
+      - "*:future"
 
 app:
   cors:

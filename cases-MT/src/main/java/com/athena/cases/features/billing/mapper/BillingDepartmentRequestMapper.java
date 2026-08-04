@@ -157,7 +157,7 @@ public class BillingDepartmentRequestMapper {
     private void applyBillingFields(
             BillingDepartmentRequest entity,
             BillingRequestType requestType,
-            Long clientId,
+            String clientId,
             String campaignId,
             String reasonForImportance,
             Boolean dailyIssueReport,
@@ -183,7 +183,7 @@ public class BillingDepartmentRequestMapper {
             Long billingHoldByProductId
     ) {
         entity.setRequestType(requestType);
-        entity.setClientId(clientId);
+        entity.setClientId(clientId == null || clientId.isBlank() ? null : clientId.trim());
         entity.setCampaignId(campaignId);
         entity.setReasonForImportance(reasonForImportance);
         entity.setDailyIssueReport(Boolean.TRUE.equals(dailyIssueReport));

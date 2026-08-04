@@ -28,7 +28,7 @@ export interface BillingDepartmentRequestResponseDto {
   parentCaseId: number | null
   parentCaseNumber: string | null
   requestType: string | null
-  clientId: number | null
+  clientId: string | null
   clientName: string | null
   campaignId: string | null
   reasonForImportance: string | null
@@ -65,7 +65,7 @@ export interface BillingDepartmentRequestResponseDto {
 /** POST body — BillingDepartmentRequestCreateRequest */
 export interface BillingDepartmentRequestCreatePayload {
   requestType: string | null
-  clientId: number | null
+  clientId: string | null
   campaignId: string | null
   assignedTo: string | null
   priority: string
