@@ -90,6 +90,7 @@ export function GeneralSection({
               testId="billing-campaign-id"
               ariaInvalid={Boolean(errors.campaignId)}
               valueKey="code"
+              emptyLabel={values.clientId ? 'No records available' : 'Select a client first'}
             />
             <BillingFieldError message={errors.campaignId} testId="billing-campaign-id-error" />
           </label>

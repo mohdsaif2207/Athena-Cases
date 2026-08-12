@@ -22,7 +22,8 @@ export interface ValidateBillingFormOptions {
 
 /**
  * Client-side checks that mirror BillingDepartmentRequestCreate/UpdateRequest Bean Validation
- * plus User Story mandatory fields (Case Owner, Priority, Status, Request Description).
+ * plus User Story mandatory fields (Case Owner, Priority, Status).
+ * Request Description is optional (max 5000).
  */
 export function validateBillingForm(
   values: BillingFormValues,
@@ -54,9 +55,7 @@ export function validateBillingForm(
   }
 
   const description = values.requestDescription.trim()
-  if (!description) {
-    errors.requestDescription = 'Request Description is required'
-  } else if (description.length > 5000) {
+  if (description.length > 5000) {
     errors.requestDescription = 'size must be between 0 and 5000'
   }
 

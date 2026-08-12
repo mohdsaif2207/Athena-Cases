@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchCases, updateCase } from '@/features/cases/api/casesApi'
-import { fetchAuthorizedCaseTypes, type CaseTypeOption } from '@/features/cases/api/lookupApi'
+import { type CaseTypeOption } from '@/features/cases/api/lookupApi'
 import { CaseDetailsModal } from '@/features/cases/components/CaseDetailsModal'
 import { CasesAdvancedFilters } from '@/features/cases/components/CasesAdvancedFilters'
 import { CasesColumnConfig } from '@/features/cases/components/CasesColumnConfig'
@@ -191,16 +191,9 @@ export function CasesSearchPage() {
   }
 
   async function handleNewCase() {
-    try {
-      const types = await fetchAuthorizedCaseTypes()
-      if (types.length === 1) {
-        handleCaseTypeSelected(types[0])
-        return
-      }
-      setCaseTypeModalOpen(true)
-    } catch {
-      setCaseTypeModalOpen(true)
-    }
+    // Always show the shared Case Type popup (User Story). Continue stays disabled
+    // until a type is selected in NewCaseTypeModal — do not auto-skip when only one type.
+    setCaseTypeModalOpen(true)
   }
 
   return (

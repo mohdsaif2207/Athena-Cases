@@ -258,13 +258,13 @@ class BillingDepartmentRequestServiceImplTest {
         when(caseManagementService.getCase(caseId)).thenReturn(new CaseRef(caseId, "CASE-7", 1L));
         when(billingRepository.findByCaseId(caseId))
                 .thenReturn(Optional.of(persistedEntity(caseId, "BIL000007")));
-        when(billingLookupService.listCampaigns()).thenReturn(List.of(
+        when(billingLookupService.listCampaigns("CLIENT001")).thenReturn(List.of(
                 new LookupItem("1", "CAMP-A", "Campaign A")
         ));
 
         BillingDepartmentRequestUpdateRequest request = new BillingDepartmentRequestUpdateRequest(
                 BillingRequestType.RESEARCH,
-                null,
+                "CLIENT001",
                 "UNKNOWN-CAMP",
                 null,
                 "Medium",

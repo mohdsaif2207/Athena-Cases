@@ -94,18 +94,15 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
     ;(async () => {
       setLookupsLoading(true)
       try {
-        const [clientRows, campaignRows, productRows, parentRows, assigneeRows, holdLevels] =
-          await Promise.all([
-            fetchActiveClients(),
-            fetchCampaigns(),
-            fetchProducts(),
-            fetchParentCases(),
-            fetchBillingAssignees().catch(() => [] as BillingAssigneeDto[]),
-            fetchBillingHoldLevels().catch(() => [] as string[]),
-          ])
+        const [clientRows, productRows, parentRows, assigneeRows, holdLevels] = await Promise.all([
+          fetchActiveClients(),
+          fetchProducts(),
+          fetchParentCases(),
+          fetchBillingAssignees().catch(() => [] as BillingAssigneeDto[]),
+          fetchBillingHoldLevels().catch(() => [] as string[]),
+        ])
         if (cancelled) return
         setClients(clientRows)
-        setCampaigns(campaignRows)
         setProducts(productRows)
         setParentCases(parentRows)
         setAssignees(assigneeRows)
@@ -127,6 +124,24 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
     ;(async () => {
       const rows = await fetchSegmentsForClient(values.clientId)
       if (!cancelled) setSegments(rows)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [values.clientId])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const rows = await fetchCampaigns(values.clientId)
+      if (cancelled) return
+      setCampaigns(rows)
+      setValues((prev) => {
+        if (!prev.campaignId) return prev
+        const stillValid = rows.some((c) => c.code === prev.campaignId || c.id === prev.campaignId)
+        if (stillValid) return prev
+        return { ...prev, campaignId: '' }
+      })
     })()
     return () => {
       cancelled = true
@@ -173,11 +188,12 @@ export function BillingRequestForm({ mode, caseId }: BillingRequestFormProps) {
   }
 
   function onClientChange(clientId: string) {
-    setValues((prev) => ({ ...prev, clientId, segmentId: '' }))
+    setValues((prev) => ({ ...prev, clientId, segmentId: '', campaignId: '' }))
     setErrors((prev) => {
       const next = { ...prev }
       delete next.clientId
       delete next.segmentId
+      delete next.campaignId
       return next
     })
   }

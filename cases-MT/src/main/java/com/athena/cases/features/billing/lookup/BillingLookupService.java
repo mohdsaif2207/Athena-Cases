@@ -12,7 +12,13 @@ import java.util.List;
  */
 public interface BillingLookupService {
 
-    List<LookupItem> listCampaigns();
+    /**
+     * Campaigns for the selected client.
+     *
+     * <p>{@code null} returns the full list (backward compatible). Blank returns empty
+     * (no client selected). Non-blank filters to that client's campaigns.
+     */
+    List<LookupItem> listCampaigns(String clientId);
 
     List<LookupItem> listProducts(String query);
 

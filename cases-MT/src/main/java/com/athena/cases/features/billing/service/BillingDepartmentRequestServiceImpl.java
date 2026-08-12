@@ -245,6 +245,18 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
             Long billingHoldByProductId,
             Long parentCaseId
     ) {
+        if (campaignId != null && !campaignId.isBlank()) {
+            String normalizedClientId = blankToNull(clientId);
+            if (normalizedClientId == null) {
+                throw new BillingValidationException("campaignId", "campaignId requires a selected clientId");
+            }
+            boolean ok = billingLookupService.listCampaigns(normalizedClientId).stream()
+                    .anyMatch(item -> campaignId.equals(item.code()) || campaignId.equals(item.id()));
+            if (!ok) {
+                throw new BillingValidationException("campaignId",
+                        "campaignId must be an active campaign for the selected client");
+            }
+        }
         String normalizedClientId = blankToNull(clientId);
         if (normalizedClientId != null) {
             boolean ok = lookupService.listActiveClients().stream()
@@ -252,13 +264,6 @@ public class BillingDepartmentRequestServiceImpl implements BillingDepartmentReq
                             || normalizedClientId.equals(item.code()));
             if (!ok) {
                 throw new BillingValidationException("clientId", "clientId must be an active client");
-            }
-        }
-        if (campaignId != null && !campaignId.isBlank()) {
-            boolean ok = billingLookupService.listCampaigns().stream()
-                    .anyMatch(item -> campaignId.equals(item.code()) || campaignId.equals(item.id()));
-            if (!ok) {
-                throw new BillingValidationException("campaignId", "campaignId must be an active campaign");
             }
         }
         if (segmentId != null) {

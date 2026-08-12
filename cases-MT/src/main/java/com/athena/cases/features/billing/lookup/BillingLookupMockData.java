@@ -15,10 +15,24 @@ import java.util.Map;
 public final class BillingLookupMockData {
 
     // TEMP: Replace with shared lookup API when available.
+    // Flat list kept for unfiltered callers (clientId == null).
     public static final List<LookupItem> CAMPAIGNS = List.of(
             item("CMP001", "Q3 Retention"),
             item("CMP002", "New Member Drive"),
             item("CMP003", "Billing Hold Pilot"));
+
+    // TEMP: Replace with shared lookup API when available.
+    // Keys match shared client codes (CLIENT001…) — Campaign ID depends on Client Name.
+    public static final Map<String, List<LookupItem>> CAMPAIGNS_BY_CLIENT = Map.of(
+            "CLIENT001", List.of(
+                    item("CMP001", "Q3 Retention"),
+                    item("CMP002", "New Member Drive")),
+            "CLIENT002", List.of(
+                    item("CMP002", "New Member Drive"),
+                    item("CMP003", "Billing Hold Pilot")),
+            "CLIENT003", List.of(
+                    item("CMP001", "Q3 Retention"),
+                    item("CMP003", "Billing Hold Pilot")));
 
     // TEMP: Replace with shared lookup API when available.
     // id is numeric so Billing Long productId / billingHoldByProductId validation can match.
@@ -54,6 +68,20 @@ public final class BillingLookupMockData {
             return List.of();
         }
         return SEGMENTS_BY_CLIENT.getOrDefault(clientId.trim(), List.of());
+    }
+
+    /**
+     * Campaigns for a client key. Empty when blank/unknown.
+     * {@code null} clientId returns the full campaign list (unfiltered / backward compatible).
+     */
+    public static List<LookupItem> campaignsForClient(String clientId) {
+        if (clientId == null) {
+            return CAMPAIGNS;
+        }
+        if (clientId.isBlank()) {
+            return List.of();
+        }
+        return CAMPAIGNS_BY_CLIENT.getOrDefault(clientId.trim(), List.of());
     }
 
     /** Case-insensitive contains match on id, code, or label. Blank query returns the full list. */

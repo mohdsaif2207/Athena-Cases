@@ -43,9 +43,9 @@ public class BillingLookupServiceImpl implements BillingLookupService {
     }
 
     @Override
-    public List<LookupItem> listCampaigns() {
+    public List<LookupItem> listCampaigns(String clientId) {
         // TEMP: Replace with shared lookup API when available.
-        return BillingLookupMockData.CAMPAIGNS;
+        return BillingLookupMockData.campaignsForClient(clientId);
     }
 
     @Override

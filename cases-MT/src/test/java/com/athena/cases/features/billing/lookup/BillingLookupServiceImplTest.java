@@ -59,8 +59,15 @@ class BillingLookupServiceImplTest {
 
     @Test
     void should_returnBillingCampaignsFromMockData() {
-        assertThat(service.listCampaigns()).extracting(LookupItem::code)
+        assertThat(service.listCampaigns(null)).extracting(LookupItem::code)
                 .contains("CMP001", "CMP002", "CMP003");
+    }
+
+    @Test
+    void should_returnCampaignsForSelectedClientOnly() {
+        assertThat(service.listCampaigns("CLIENT001")).extracting(LookupItem::code)
+                .containsExactly("CMP001", "CMP002");
+        assertThat(service.listCampaigns("")).isEmpty();
     }
 
     @Test

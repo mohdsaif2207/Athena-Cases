@@ -63,7 +63,6 @@ public record BillingDepartmentRequestUpdateRequest(
 
         LocalDate anticipatedReleaseDate,
 
-        @NotBlank
         @Size(max = 5000)
         String requestDescription,
 

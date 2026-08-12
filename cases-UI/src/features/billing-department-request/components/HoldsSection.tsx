@@ -139,14 +139,14 @@ export function HoldsSection({
           </div>
 
           <label className="billing-field billing-field--full">
-            <BillingFieldLabel required>Request Description</BillingFieldLabel>
+            <BillingFieldLabel>Request Description</BillingFieldLabel>
             <textarea
               className="billing-textarea billing-textarea--large"
               rows={5}
               value={values.requestDescription}
               maxLength={5000}
               readOnly={readOnly}
-              placeholder="Enter request description (required, max 5000 characters)"
+              placeholder="Enter request description (optional, max 5000 characters)"
               onChange={(e) => onChange('requestDescription', e.target.value)}
               data-testid="billing-request-description"
               aria-invalid={Boolean(errors.requestDescription)}

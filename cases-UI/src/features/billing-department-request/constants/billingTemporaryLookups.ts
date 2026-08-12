@@ -12,6 +12,27 @@ export const BILLING_TEMP_CAMPAIGNS: LookupItemDto[] = [
   { id: 'CMP003', code: 'CMP003', label: 'Billing Hold Pilot' },
 ]
 
+/** Keyed by client id/code — Campaign ID depends on Client Name. */
+export const BILLING_TEMP_CAMPAIGNS_BY_CLIENT: Record<string, LookupItemDto[]> = {
+  CLIENT001: [
+    { id: 'CMP001', code: 'CMP001', label: 'Q3 Retention' },
+    { id: 'CMP002', code: 'CMP002', label: 'New Member Drive' },
+  ],
+  CLIENT002: [
+    { id: 'CMP002', code: 'CMP002', label: 'New Member Drive' },
+    { id: 'CMP003', code: 'CMP003', label: 'Billing Hold Pilot' },
+  ],
+  CLIENT003: [
+    { id: 'CMP001', code: 'CMP001', label: 'Q3 Retention' },
+    { id: 'CMP003', code: 'CMP003', label: 'Billing Hold Pilot' },
+  ],
+}
+
+export function billingTempCampaignsForClient(clientId: string): LookupItemDto[] {
+  if (!clientId.trim()) return []
+  return BILLING_TEMP_CAMPAIGNS_BY_CLIENT[clientId.trim()] ?? []
+}
+
 export const BILLING_TEMP_PRODUCTS: LookupItemDto[] = [
   { id: '101', code: 'PRD001', label: 'Checking' },
   { id: '102', code: 'PRD002', label: 'Savings' },

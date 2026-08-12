@@ -4,21 +4,21 @@
  */
 
 .billing-page {
-  --billing-navy: #1a237e;
-  --billing-navy-soft: #2a3558;
-  --billing-coral: #e5534b;
-  --billing-coral-hover: #d4453d;
-  --billing-input-bg: #eff2f7;
-  --billing-border: #cfd6e0;
-  --billing-label: #555a66;
-  --billing-page-bg: #e8ebf2;
+  --billing-navy: #0b1f4a;
+  --billing-navy-soft: #163468;
+  --billing-coral: #e05b4d;
+  --billing-coral-hover: #c94c40;
+  --billing-input-bg: #eef0f8;
+  --billing-border: #d5d8e4;
+  --billing-label: #5c6478;
+  --billing-page-bg: #f4f5f9;
   --billing-required: #dc2626;
-  --billing-muted: #6b7280;
-  --billing-focus: rgba(26, 35, 126, 0.28);
+  --billing-muted: #5c6478;
+  --billing-focus: rgba(11, 31, 74, 0.28);
   min-height: 100vh;
   background: var(--billing-page-bg);
-  font-family: Arial, Helvetica, "Segoe UI", sans-serif;
-  color: #1f2937;
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  color: #2b2f3a;
   padding: 28px 36px 56px;
   box-sizing: border-box;
 }
@@ -34,7 +34,7 @@
   padding: 14px 20px;
   background: var(--billing-navy);
   border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(26, 35, 126, 0.12);
+  box-shadow: 0 2px 6px rgba(11, 31, 74, 0.12);
 }
 
 .billing-page__title {
@@ -311,7 +311,7 @@
   min-width: 88px;
   height: 28px;
   padding: 2px 6px;
-  border: 1px solid #cfd6e0;
+  border: 1px solid var(--billing-border);
   border-radius: 4px;
   background: #fff;
   color: #1f2937;

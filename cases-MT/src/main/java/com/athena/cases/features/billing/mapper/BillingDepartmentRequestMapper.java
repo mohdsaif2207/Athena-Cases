@@ -194,7 +194,8 @@ public class BillingDepartmentRequestMapper {
         entity.setSegmentId(segmentId);
         entity.setProductId(productId);
         entity.setAnticipatedReleaseDate(anticipatedReleaseDate);
-        entity.setRequestDescription(requestDescription);
+        // NOT NULL column — coerce null/blank to empty string (description is optional in UX).
+        entity.setRequestDescription(requestDescription == null ? "" : requestDescription);
         entity.setBillingExtractType(billingExtractType);
         entity.setPreNoteRequestType(preNoteRequestType);
         entity.setBillingInstitution(billingInstitution);

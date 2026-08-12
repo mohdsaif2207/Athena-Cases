@@ -36,8 +36,12 @@ public class BillingLookupController {
     @GetMapping("/campaigns")
     @PreAuthorize("hasAuthority('PERM_" + PermissionCodes.CASES_CREATE + "') or hasAuthority('PERM_"
             + PermissionCodes.CASES_ACCESS + "')")
-    public ResponseEntity<ApiResponse<List<LookupItem>>> campaigns(HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(ApiResponse.of(billingLookupService.listCampaigns(), resolveRequestId(httpRequest)));
+    public ResponseEntity<ApiResponse<List<LookupItem>>> campaigns(
+            @RequestParam(required = false) String clientId,
+            HttpServletRequest httpRequest
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.of(billingLookupService.listCampaigns(clientId), resolveRequestId(httpRequest)));
     }
 
     @GetMapping("/products")

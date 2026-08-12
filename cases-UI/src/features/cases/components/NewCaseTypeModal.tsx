@@ -58,7 +58,7 @@ export function NewCaseTypeModal({ open, onClose, onSelect }: NewCaseTypeModalPr
     onSelect(selected)
   }
 
-  const showContinue = Boolean(selectedCode) && !loading && !error && options.length > 0
+  const canContinue = Boolean(selectedCode) && !loading && !error && options.length > 0
 
   return (
     <div className="cases-modal-backdrop" role="presentation" onClick={onClose}>
@@ -151,16 +151,15 @@ export function NewCaseTypeModal({ open, onClose, onSelect }: NewCaseTypeModalPr
           >
             Cancel
           </button>
-          {showContinue ? (
-            <button
-              type="button"
-              className="cases-action-btn"
-              onClick={handleContinue}
-              data-testid="new-case-type-continue"
-            >
-              Continue
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="cases-action-btn"
+            onClick={handleContinue}
+            disabled={!canContinue}
+            data-testid="new-case-type-continue"
+          >
+            Continue
+          </button>
         </footer>
       </div>
     </div>
